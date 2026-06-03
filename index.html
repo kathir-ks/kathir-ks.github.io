@@ -1,68 +1,600 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Your Name - Portfolio</title>
-    <style>
-        body {
-            font-family: 'Courier New', monospace;
-            background-color: ;
-            color: rgb(25, 27, 25);
-            line-height: 1.6;
-            margin: 0;
-            padding: 20px;
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        h1, h2 {
-            border-bottom: 1px solid rgb(65, 70, 65);
-            padding-bottom: 10px;
-        }
-        a {
-            color: rgb(38, 93, 212);
-        }
-    </style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Kathir K S — AI Researcher</title>
+<meta name="description" content="Live portfolio OS — AI researcher building frontier ML from India."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&family=Fraunces:ital,opsz,wght@0,9..144,300;1,9..144,300&family=Geist:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#070710;--surface:#0e0e1a;--surface2:#161625;--border:#252538;
+  --accent:#7fffb2;--accent2:#a78bfa;--accent3:#38bdf8;--accent4:#fb923c;
+  --text:#ddddf0;--muted:#5a5a78;
+  --mono:'JetBrains Mono',monospace;--serif:'Fraunces',serif;--sans:'Geist',sans-serif;
+  --term-h:440px;
+}
+/* ── Set the API URL: either edit the const API = ... line in the <script> at
+   the bottom, or set window.__KATHIR_OS_API__ from a separate config.js. ── */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow-x:hidden;}
+@media (hover:hover) and (pointer:fine){body{cursor:none;}}
+#cur{width:10px;height:10px;background:var(--accent);border-radius:50%;position:fixed;top:0;left:0;pointer-events:none;z-index:9999;mix-blend-mode:difference;transition:transform .12s;}
+#cur-r{width:32px;height:32px;border:1px solid var(--accent);border-radius:50%;position:fixed;top:0;left:0;pointer-events:none;z-index:9998;opacity:.4;transition:all .4s cubic-bezier(.23,1,.32,1);}
+@media (hover:none),(pointer:coarse){#cur,#cur-r{display:none;}}
+#canvas-bg{position:fixed;inset:0;z-index:0;pointer-events:none;}
+nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:1.1rem 3rem;background:rgba(7,7,16,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);font-family:var(--mono);font-size:11px;}
+.nav-logo{color:var(--accent);font-weight:600;letter-spacing:.08em;}
+.nav-links{display:flex;gap:2rem;}
+.nav-links a{color:var(--muted);text-decoration:none;letter-spacing:.1em;text-transform:uppercase;transition:color .2s;}
+.nav-links a:hover,.nav-links a.active{color:var(--accent);}
+.nav-right{display:flex;align-items:center;gap:1rem;}
+.status-pip{width:6px;height:6px;background:var(--accent);border-radius:50%;animation:pip 2s ease-in-out infinite;flex-shrink:0;}
+@keyframes pip{0%,100%{opacity:1}50%{opacity:.3}}
+#nav-status-text{font-family:var(--mono);font-size:11px;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#term-toggle{font-family:var(--mono);font-size:11px;color:var(--accent);background:rgba(127,255,178,.06);border:1px solid rgba(127,255,178,.2);padding:5px 14px;cursor:pointer;transition:all .2s;}
+#term-toggle:hover{background:rgba(127,255,178,.12);}
+#gui{position:relative;z-index:1;}
+.gui-section{min-height:100vh;display:flex;align-items:center;padding:8rem 3rem 5rem;position:relative;}
+.gs-inner{max-width:1100px;margin:0 auto;width:100%;}
+.hero-eyebrow{font-family:var(--mono);font-size:11px;color:var(--accent);letter-spacing:.2em;text-transform:uppercase;margin-bottom:1.5rem;opacity:0;animation:fup .6s ease .4s forwards;}
+.hero-name{font-family:var(--serif);font-size:clamp(4rem,10vw,9rem);line-height:.9;letter-spacing:-.02em;margin-bottom:1.2rem;opacity:0;animation:fup .9s ease .6s forwards;font-weight:300;}
+.hero-name .outline{-webkit-text-stroke:1px rgba(221,221,240,.2);color:transparent;font-style:italic;}
+.hero-desc{font-size:clamp(14px,1.8vw,17px);color:var(--muted);max-width:520px;line-height:1.9;margin-bottom:2.5rem;opacity:0;animation:fup .9s ease .85s forwards;}
+.hero-ctas{display:flex;gap:1rem;flex-wrap:wrap;opacity:0;animation:fup .9s ease 1s forwards;}
+.btn{font-family:var(--mono);font-size:12px;padding:.7rem 1.6rem;text-decoration:none;border:1px solid;letter-spacing:.05em;transition:all .22s;display:inline-flex;align-items:center;gap:8px;}
+.btn-p{color:#000;background:var(--accent);border-color:var(--accent);}
+.btn-p:hover{background:#5affaa;}
+.btn-s{color:var(--text);background:transparent;border-color:var(--border);}
+.btn-s:hover{border-color:var(--accent);color:var(--accent);}
+.hero-scroll{position:absolute;bottom:2.5rem;left:3rem;font-family:var(--mono);font-size:10px;color:var(--muted);display:flex;flex-direction:column;gap:8px;align-items:flex-start;opacity:0;animation:fup .8s ease 1.4s forwards;}
+.scroll-bar{width:1px;height:48px;background:linear-gradient(to bottom,var(--accent),transparent);animation:sdrop 2s ease-in-out infinite;}
+@keyframes sdrop{0%{transform:scaleY(0);transform-origin:top}50%{transform:scaleY(1);transform-origin:top}51%{transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}
+@keyframes fup{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+/* live feed */
+#s-feed{border-top:1px solid var(--border);}
+.feed-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);}
+.feed-col{background:var(--surface);padding:1.5rem;}
+.feed-col-title{font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:.15em;text-transform:uppercase;margin-bottom:1rem;display:flex;align-items:center;gap:8px;}
+.live-dot{width:5px;height:5px;background:var(--accent);border-radius:50%;animation:pip 1.5s ease-in-out infinite;}
+.feed-item{padding:.65rem 0;border-bottom:1px solid var(--border);font-size:12px;}
+.feed-item:last-child{border-bottom:none;}
+.fi-src{font-family:var(--mono);font-size:10px;margin-bottom:.2rem;}
+.fi-src.gh{color:var(--accent3)}.fi-src.hf{color:var(--accent4)}.fi-src.log{color:var(--accent2)}
+.fi-msg{color:var(--muted);line-height:1.5;}
+.fi-time{font-family:var(--mono);font-size:10px;color:var(--border);margin-top:.25rem;}
+.feed-empty{font-family:var(--mono);font-size:11px;color:var(--border);padding:1rem 0;}
+.paper-item{padding:.65rem 0;border-bottom:1px solid var(--border);}
+.paper-item:last-child{border-bottom:none;}
+.paper-title{font-size:12px;color:var(--text);margin-bottom:.25rem;line-height:1.5;}
+.paper-why{font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:.3rem;}
+.paper-link{font-family:var(--mono);font-size:10px;color:var(--accent3);text-decoration:none;}
+.paper-link:hover{color:var(--accent);}
+.log-entry{padding:.65rem 0;border-bottom:1px solid var(--border);cursor:pointer;}
+.log-entry:last-child{border-bottom:none;}
+.log-date{font-family:var(--mono);font-size:10px;color:var(--accent);margin-bottom:.2rem;}
+.log-preview{font-size:12px;color:var(--muted);}
+
+/* sections */
+.sec-label{font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:.2em;text-transform:uppercase;margin-bottom:1rem;}
+.sec-title{font-family:var(--serif);font-size:clamp(2.5rem,5vw,4rem);line-height:1.05;margin-bottom:2.5rem;font-weight:300;}
+#s-about,#s-projects,#s-research,#s-contact{border-top:1px solid var(--border);}
+.about-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:5rem;align-items:start;}
+.about-text p{color:var(--muted);font-size:14.5px;line-height:1.95;margin-bottom:1.1rem;}
+.about-text strong{color:var(--text);font-weight:500;}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);margin-bottom:1.5rem;}
+.stat-cell{background:var(--surface);padding:1.4rem;transition:background .2s;}
+.stat-cell:hover{background:var(--surface2);}
+.stat-n{font-family:var(--mono);font-size:1.9rem;font-weight:600;color:var(--accent);line-height:1;margin-bottom:.3rem;}
+.stat-l{font-size:11px;color:var(--muted);}
+.chips{display:flex;flex-wrap:wrap;gap:7px;}
+.chip{font-family:var(--mono);font-size:10px;color:var(--muted);border:1px solid var(--border);padding:3px 11px;transition:all .2s;}
+.chip:hover{color:var(--accent);border-color:rgba(127,255,178,.3);}
+.proj-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:1px;background:var(--border);border:1px solid var(--border);}
+.proj-card{background:var(--surface);padding:2rem;text-decoration:none;color:inherit;display:block;position:relative;overflow:hidden;transition:background .25s;}
+.proj-card::after{content:'';position:absolute;top:0;left:0;right:0;height:1.5px;background:var(--accent);transform:scaleX(0);transform-origin:left;transition:transform .3s ease;}
+.proj-card:hover{background:var(--surface2);}
+.proj-card:hover::after{transform:scaleX(1);}
+.proj-n{font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:1.2rem;}
+.proj-title{font-family:var(--serif);font-size:1.3rem;margin-bottom:.6rem;font-weight:300;}
+.proj-desc{font-size:13px;color:var(--muted);line-height:1.85;margin-bottom:1.2rem;}
+.proj-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:1.2rem;}
+.ptag{font-family:var(--mono);font-size:10px;padding:2px 8px;border:1px solid;}
+.ptag-g{color:var(--accent);border-color:rgba(127,255,178,.2);}
+.ptag-p{color:var(--accent2);border-color:rgba(167,139,250,.2);}
+.ptag-b{color:var(--accent3);border-color:rgba(56,189,248,.2);}
+.ptag-o{color:var(--accent4);border-color:rgba(251,146,60,.2);}
+.proj-link{font-family:var(--mono);font-size:11px;color:var(--accent);display:flex;align-items:center;gap:6px;transition:gap .2s;}
+.proj-card:hover .proj-link{gap:10px;}
+.tl{padding-left:1.5rem;position:relative;}
+.tl::before{content:'';position:absolute;left:0;top:6px;bottom:0;width:1px;background:linear-gradient(to bottom,var(--accent),transparent);}
+.tl-item{position:relative;padding-left:2rem;margin-bottom:2.8rem;}
+.tl-dot{position:absolute;left:-1.875rem;top:5px;width:7px;height:7px;background:var(--accent);border-radius:50%;box-shadow:0 0 10px var(--accent);}
+.tl-dot.dim{background:var(--muted);box-shadow:none;}
+.tl-date{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.12em;margin-bottom:.3rem;}
+.tl-title{font-family:var(--serif);font-size:1.25rem;margin-bottom:.4rem;font-weight:300;}
+.tl-body{font-size:13.5px;color:var(--muted);line-height:1.85;}
+.contact-grid{display:grid;grid-template-columns:1fr 1fr;gap:5rem;align-items:center;}
+.contact-big{font-family:var(--serif);font-size:clamp(2.2rem,4vw,3.5rem);line-height:1.1;margin-bottom:1.5rem;font-weight:300;}
+.contact-big em{font-style:italic;color:transparent;-webkit-text-stroke:1px rgba(221,221,240,.3);}
+.contact-text p{color:var(--muted);font-size:14px;line-height:1.9;margin-bottom:1rem;}
+.clinks{display:flex;flex-direction:column;gap:.75rem;}
+.clink{display:flex;align-items:center;gap:1rem;font-family:var(--mono);font-size:12px;color:var(--muted);text-decoration:none;padding:.9rem 1.2rem;border:1px solid var(--border);background:var(--surface);transition:all .22s;}
+.clink::after{content:'→';margin-left:auto;transition:transform .2s;}
+.clink:hover{color:var(--accent);border-color:rgba(127,255,178,.25);background:rgba(127,255,178,.04);}
+.clink:hover::after{transform:translateX(4px);}
+.clink-ico{font-size:14px;opacity:.6;font-style:normal;}
+footer{border-top:1px solid var(--border);padding:1.8rem 3rem;font-family:var(--mono);font-size:10px;color:var(--muted);display:flex;justify-content:space-between;align-items:center;position:relative;z-index:1;}
+footer a{color:var(--muted);text-decoration:none;transition:color .2s;}
+footer a:hover{color:var(--accent);}
+
+/* terminal */
+#term-wrap{position:fixed;z-index:500;bottom:2rem;right:2rem;width:min(600px,calc(100vw - 3rem));box-shadow:0 0 60px rgba(127,255,178,.07),0 30px 80px rgba(0,0,0,.6);border:1px solid var(--border);transition:height .3s cubic-bezier(.4,0,.2,1),opacity .3s ease,transform .3s ease;background:rgba(10,10,20,.93);backdrop-filter:blur(24px);}
+#term-wrap.collapsed{height:38px!important;overflow:hidden;}
+#term-wrap.hidden{opacity:0;pointer-events:none;transform:translateY(16px);}
+.term-bar{background:var(--surface2);padding:0 12px;height:38px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border);cursor:grab;flex-shrink:0;}
+.term-bar:active{cursor:grabbing;}
+.t-dot{width:10px;height:10px;border-radius:50%;cursor:pointer;flex-shrink:0;}
+.td-r{background:#ff5f57}.td-y{background:#febc2e}.td-g{background:#28c840}
+.term-title{font-family:var(--mono);font-size:10px;color:var(--muted);margin:0 auto;}
+.term-bar-acts{display:flex;gap:6px;margin-left:auto;}
+.term-btn{font-family:var(--mono);font-size:9px;color:var(--muted);background:none;border:1px solid var(--border);padding:2px 8px;cursor:pointer;transition:all .15s;}
+.term-btn:hover{color:var(--accent);border-color:var(--accent);}
+.term-tabs{display:flex;border-bottom:1px solid var(--border);background:var(--surface);}
+.term-tab{font-family:var(--mono);font-size:10px;color:var(--muted);padding:6px 16px;cursor:pointer;border-right:1px solid var(--border);transition:all .15s;}
+.term-tab.active{color:var(--accent);background:var(--bg);}
+.term-tab:hover:not(.active){color:var(--text);}
+#term-body{height:calc(var(--term-h) - 38px - 28px - 40px);overflow-y:auto;padding:1rem 1.2rem;font-family:var(--mono);font-size:12px;line-height:1.9;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
+#term-body::-webkit-scrollbar{width:4px}
+#term-body::-webkit-scrollbar-thumb{background:var(--border)}
+.t-out{color:var(--muted)}.t-out.g{color:var(--accent)}.t-out.b{color:var(--accent3)}.t-out.p{color:var(--accent2)}.t-out.o{color:var(--accent4)}.t-out.w{color:#fff}.t-out.err{color:#f87171}.t-out.pre{white-space:pre;font-size:11px}
+#term-input-row{height:40px;display:flex;align-items:center;padding:0 1.2rem;border-top:1px solid var(--border);gap:8px;}
+.t-prompt-label{color:var(--accent);font-family:var(--mono);font-size:12px;white-space:nowrap;}
+#term-input{flex:1;background:transparent;border:none;outline:none;font-family:var(--mono);font-size:12px;color:var(--text);caret-color:var(--accent);}
+#pane-terminal{display:flex;flex-direction:column;}
+#pane-terminal.hidden{display:none;}
+#ai-pane{height:calc(var(--term-h) - 38px - 28px);display:none;flex-direction:column;}
+#ai-pane.visible{display:flex;}
+#ai-messages{flex:1;overflow-y:auto;padding:1rem 1.2rem;font-size:13px;line-height:1.8;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
+.ai-msg{margin-bottom:1rem;padding:.7rem 1rem;}
+.ai-msg.user{background:var(--surface2);text-align:right;color:var(--text);font-size:12px;font-family:var(--mono);}
+.ai-msg.assistant{background:rgba(127,255,178,.03);border-left:2px solid var(--accent);color:var(--muted);}
+.ai-msg.thinking{color:var(--muted);font-family:var(--mono);font-size:11px;animation:blink 1s step-end infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+#ai-input-row{display:flex;gap:8px;padding:.75rem 1.2rem;border-top:1px solid var(--border);}
+#ai-input{flex:1;background:var(--surface);border:1px solid var(--border);outline:none;font-family:var(--mono);font-size:12px;color:var(--text);padding:6px 10px;transition:border-color .2s;}
+#ai-input:focus{border-color:var(--accent);}
+#ai-send{font-family:var(--mono);font-size:11px;color:var(--accent);background:rgba(127,255,178,.06);border:1px solid rgba(127,255,178,.2);padding:6px 14px;cursor:pointer;transition:all .2s;}
+#ai-send:hover{background:rgba(127,255,178,.12);}
+.rv{opacity:0;transform:translateY(24px);transition:opacity .7s ease,transform .7s ease;}
+.rv.vis{opacity:1;transform:none;}
+@media(max-width:768px){nav{padding:1rem 1.5rem;}.nav-links{display:none;}.gui-section{padding:7rem 1.5rem 4rem;}.about-grid,.contact-grid{grid-template-columns:1fr;gap:2.5rem;}.feed-grid{grid-template-columns:1fr;}#term-wrap{bottom:0;right:0;left:0;width:100%;}footer{padding:1.5rem;flex-direction:column;gap:.4rem;text-align:center;}}
+</style>
 </head>
 <body>
-    <header>
-        <h1>Kathir K S</h1>
-        <p>Software Engineer | Generalist </p>
-    </header>
+<div id="cur"></div>
+<div id="cur-r"></div>
+<canvas id="canvas-bg"></canvas>
 
-    <section id="about">
-        <h2>About Me</h2>
-        <p> Struggling with <a href="https://en.wikipedia.org/wiki/Intellectual_curiosity"> epistemic curiosity</a></p>
-    </section>
+<nav>
+  <div class="nav-logo">KKS <span style="color:var(--muted)">://</span></div>
+  <div class="nav-links">
+    <a href="#s-feed">Live</a>
+    <a href="#s-about">About</a>
+    <a href="#s-projects">Projects</a>
+    <a href="#s-research">Research</a>
+    <a href="#s-contact">Contact</a>
+  </div>
+  <div class="nav-right">
+    <div class="status-pip"></div>
+    <span id="nav-status-text">loading...</span>
+    <button id="term-toggle">terminal _</button>
+  </div>
+</nav>
 
-    <section id="skills">
-        <h2>Skills</h2>
-        <ul>
-            <li>Programming Languages - C, C++, Python</li>
-            <li>Frameworks - Jax</li>
-            <li>Google Cloud</li>
-            <li>Tools - Git, Linux</li>
-        </ul>
-    </section>
+<div id="gui">
+  <!-- HERO -->
+  <div class="gui-section" id="s-hero">
+    <div class="gs-inner">
+      <div class="hero-eyebrow">// AI Researcher · Systems Engineer · Madurai, India</div>
+      <h1 class="hero-name">Kathir<br/><span class="outline">K S</span></h1>
+      <p class="hero-desc">Building frontier AI from India — mechanistic interpretability, large-scale pretraining, TPU infrastructure. This site is a live OS.</p>
+      <div class="hero-ctas">
+        <a href="#s-feed" class="btn btn-p">Live Feed</a>
+        <a href="#s-projects" class="btn btn-s">Projects</a>
+        <a href="https://huggingface.co/KathirKs" target="_blank" class="btn btn-s">HuggingFace ↗</a>
+      </div>
+    </div>
+    <div class="hero-scroll"><div class="scroll-bar"></div><span>scroll</span></div>
+  </div>
 
-    <section id="projects">
-        <h2>Projects</h2>
-        <div class="project">
-            <h3><a href="https://huggingface.co/datasets/KathirKs/fineweb-edu-hindi">Fineweb-edu-hindi</a></h3>
-            <p>Synthetic Dataset in hindi containing around 300 Billion tokens.</p>
+  <!-- LIVE FEED -->
+  <div class="gui-section" id="s-feed" style="min-height:auto;padding:5rem 3rem;">
+    <div class="gs-inner">
+      <div class="sec-label rv">Live System</div>
+      <h2 class="sec-title rv" style="transition-delay:.05s">What's<br/><em style="font-style:italic">happening now.</em></h2>
+      <div class="feed-grid rv" style="transition-delay:.1s">
+        <div class="feed-col">
+          <div class="feed-col-title"><div class="live-dot"></div>Activity</div>
+          <div id="activity-feed"><div class="feed-empty">fetching...</div></div>
         </div>
-    </section>
+        <div class="feed-col">
+          <div class="feed-col-title"><div class="live-dot" style="background:var(--accent2)"></div>Research Log</div>
+          <div id="logs-feed"><div class="feed-empty">fetching...</div></div>
+        </div>
+        <div class="feed-col">
+          <div class="feed-col-title"><div class="live-dot" style="background:var(--accent3)"></div>arXiv Today</div>
+          <div id="papers-feed"><div class="feed-empty">fetching...</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-    <section id="contact">
-        <h2>Contact</h2>
-        <p>Email: kathirksw@gmail.com</p>
-        <p>GitHub: <a href="https://github.com/kathir-ks">GitHub Profile</a></p>
-        <p>LinkedIn: <a href="https://www.linkedin.com/in/kathirks">LinkedIn Profile</a></p>
-        <p>Twitter: <a href="https://x.com/kathir_k_s">Twitter Profile</a></p>
-    </section>
+  <!-- ABOUT -->
+  <div class="gui-section" id="s-about">
+    <div class="gs-inner">
+      <div class="sec-label rv">01 — About</div>
+      <div class="about-grid">
+        <div class="rv" style="transition-delay:.05s">
+          <h2 class="sec-title">Building from<br/><em style="font-style:italic">first principles.</em></h2>
+          <p>I'm a 22-year-old AI researcher from Madurai. I taught myself transformer architectures until they stopped being a paper and started being intuition.</p>
+          <p>By day I work on <strong>embedded systems and RTOS</strong> at Soliton Technologies. By conviction I'm a <strong>frontier AI researcher</strong> — training sparse autoencoders, building Hindi datasets, running experiments on TPU pods via Google's TRC program.</p>
+          <p>Long-term mission: found a <strong>Bell Labs-style research institution in India</strong> that produces fundamental science, not just products.</p>
+        </div>
+        <div class="rv" style="transition-delay:.15s">
+          <div class="stat-grid">
+            <div class="stat-cell"><div class="stat-n">300B</div><div class="stat-l">Tokens — FineWeb-Edu-Hindi</div></div>
+            <div class="stat-cell"><div class="stat-n">200M</div><div class="stat-l">Params — Hindi LLM</div></div>
+            <div class="stat-cell"><div class="stat-n" id="hf-stat">~2K</div><div class="stat-l">Monthly HF Users</div></div>
+            <div class="stat-cell"><div class="stat-n">v4·v5e</div><div class="stat-l">TPU Generations</div></div>
+          </div>
+          <div class="chips">
+            <span class="chip">JAX / XLA</span><span class="chip">Python</span><span class="chip">C / C++</span>
+            <span class="chip">Transformers</span><span class="chip">Mech. Interp</span><span class="chip">TPU Infra</span>
+            <span class="chip">Federated Learning</span><span class="chip">Pipeline Parallel</span>
+            <span class="chip">LoRA / Unsloth</span><span class="chip">Linux Kernel</span>
+            <span class="chip">VxWorks</span><span class="chip">Embedded C++</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-    <footer>
-        <p>&copy; 2024 Kathir K S. All Rights Reserved.</p>
-    </footer>
+  <!-- PROJECTS -->
+  <div class="gui-section" id="s-projects">
+    <div class="gs-inner">
+      <div class="sec-label rv">02 — Projects</div>
+      <h2 class="sec-title rv" style="transition-delay:.05s">Things I've<br/><em style="font-style:italic">shipped.</em></h2>
+      <div class="proj-grid rv" style="transition-delay:.1s">
+        <a class="proj-card" href="https://huggingface.co/datasets/KathirKs/fineweb-edu-hindi" target="_blank"><div class="proj-n">01 —</div><div class="proj-title">FineWeb-Edu-Hindi</div><div class="proj-desc">~300B token Hindi pretraining dataset. IndicTrans2 on TPU v4-256 via TRC. ~2K monthly HF users.</div><div class="proj-tags"><span class="ptag ptag-g">Dataset</span><span class="ptag ptag-p">TPU v4-256</span><span class="ptag ptag-b">IndicTrans2</span></div><span class="proj-link">HuggingFace →</span></a>
+        <a class="proj-card" href="https://huggingface.co/KathirKs/Gemma-200M-hindi" target="_blank"><div class="proj-n">02 —</div><div class="proj-title">Gemma-200M-Hindi</div><div class="proj-desc">200M parameter Hindi LM trained from scratch on quality pretraining data.</div><div class="proj-tags"><span class="ptag ptag-g">LLM</span><span class="ptag ptag-p">From Scratch</span><span class="ptag ptag-b">Hindi NLP</span></div><span class="proj-link">HuggingFace →</span></a>
+        <a class="proj-card" href="https://github.com/kathir-ks" target="_blank"><div class="proj-n">03 —</div><div class="proj-title">JumpReLU SAEs</div><div class="proj-desc">Mechanistic interp: sparse autoencoders on transformer MLP activations. JAX/TPU, L0 sparsity, straight-through estimators.</div><div class="proj-tags"><span class="ptag ptag-g">Mech. Interp</span><span class="ptag ptag-p">JAX</span><span class="ptag ptag-b">SAE</span></div><span class="proj-link">GitHub →</span></a>
+        <a class="proj-card" href="https://github.com/kathir-ks" target="_blank"><div class="proj-n">04 —</div><div class="proj-title">ARC-AGI Pipeline</div><div class="proj-desc">Distributed JAX inference for Qwen on TPU pods. KV caching, layer 29 MLP extraction, LoRA via Unsloth.</div><div class="proj-tags"><span class="ptag ptag-g">ARC-AGI</span><span class="ptag ptag-p">TPU Pods</span><span class="ptag ptag-o">LoRA</span></div><span class="proj-link">GitHub →</span></a>
+        <a class="proj-card" href="https://github.com/kathir-ks" target="_blank"><div class="proj-n">05 —</div><div class="proj-title">CAP-FL: Federated LM</div><div class="proj-desc">Context-Aware Federated Learning with DistilGPT-2. Heterogeneous clients, differential privacy.</div><div class="proj-tags"><span class="ptag ptag-g">Federated</span><span class="ptag ptag-p">GPT-2</span><span class="ptag ptag-b">Privacy</span></div><span class="proj-link">GitHub →</span></a>
+        <a class="proj-card" href="https://github.com/kathir-ks" target="_blank"><div class="proj-n">06 —</div><div class="proj-title">V8 → Rust Agent</div><div class="proj-desc">AI-assisted C++-to-Rust migration of V8 (~8M LoC). Dependency graph for LLM context management.</div><div class="proj-tags"><span class="ptag ptag-g">Rust</span><span class="ptag ptag-p">Agentic AI</span><span class="ptag ptag-b">C++</span></div><span class="proj-link">GitHub →</span></a>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESEARCH -->
+  <div class="gui-section" id="s-research">
+    <div class="gs-inner">
+      <div class="sec-label rv">03 — Research</div>
+      <h2 class="sec-title rv" style="transition-delay:.05s">The path<br/><em style="font-style:italic">so far.</em></h2>
+      <div class="tl rv" style="transition-delay:.12s">
+        <div class="tl-item"><div class="tl-dot"></div><div class="tl-date">2025 — PRESENT</div><div class="tl-title">Mechanistic Interpretability & SAE Research</div><div class="tl-body">JumpReLU SAEs on transformer activations. JAX/TPU JIT, L0 sparsity, multi-host pipelines, ~229 Kaggle datasets.</div></div>
+        <div class="tl-item"><div class="tl-dot"></div><div class="tl-date">2024 — 2025</div><div class="tl-title">ARC-AGI & Distributed Inference</div><div class="tl-body">JAX pipelines for Qwen on TPU pods. KV caching, MLP extraction, LoRA fine-tuning. ViT + AttnRes in JAX/Flax.</div></div>
+        <div class="tl-item"><div class="tl-dot"></div><div class="tl-date">2024</div><div class="tl-title">FineWeb-Edu-Hindi & Hindi LLM</div><div class="tl-body">300B token dataset on TPU v4-256 via Google TRC. 200M param LM from scratch. Outreach to Sarvam AI & DeepMind.</div></div>
+        <div class="tl-item"><div class="tl-dot"></div><div class="tl-date">2023 — 2024</div><div class="tl-title">Deep Self-Study</div><div class="tl-body">Transformers from first principles. JAX, XLA, pipeline parallelism, FSDP. TPU v3→v5e. Diffusion models, SAE theory.</div></div>
+        <div class="tl-item"><div class="tl-dot dim"></div><div class="tl-date">ONGOING</div><div class="tl-title">Soliton Technologies</div><div class="tl-body">VxWorks RTOS, embedded C++, LabVIEW, Linux kernel, PCI bus architectures.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTACT -->
+  <div class="gui-section" id="s-contact">
+    <div class="gs-inner">
+      <div class="sec-label rv">04 — Contact</div>
+      <div class="contact-grid">
+        <div class="rv">
+          <div class="contact-big">Let's build<br/><em>something</em><br/>meaningful.</div>
+          <div class="contact-text"><p>Open to conversations about AI research, hard problems, collaboration — interpretability, pretraining, systems-level ML.</p><p>If you're at a research lab working on things that matter, reach out.</p></div>
+        </div>
+        <div class="clinks rv" style="transition-delay:.12s">
+          <a class="clink" href="mailto:kathirksw@gmail.com"><i class="clink-ico">✉</i>kathirksw@gmail.com</a>
+          <a class="clink" href="https://github.com/kathir-ks" target="_blank"><i class="clink-ico">⌥</i>github.com/kathir-ks</a>
+          <a class="clink" href="https://www.linkedin.com/in/kathirks" target="_blank"><i class="clink-ico">in</i>linkedin.com/in/kathirks</a>
+          <a class="clink" href="https://x.com/kathir_k_s" target="_blank"><i class="clink-ico">𝕏</i>x.com/kathir_k_s</a>
+          <a class="clink" href="https://huggingface.co/KathirKs" target="_blank"><i class="clink-ico">🤗</i>huggingface.co/KathirKs</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <span>© 2025 Kathir K S — Madurai, India</span>
+    <span id="uptime-el" style="font-family:var(--mono);font-size:10px;color:var(--muted)"></span>
+    <a href="#s-hero">↑ top</a>
+  </footer>
+</div>
+
+<!-- TERMINAL -->
+<div id="term-wrap" style="height:var(--term-h)">
+  <div class="term-bar" id="term-bar">
+    <div class="t-dot td-r" onclick="closeTerm()"></div>
+    <div class="t-dot td-y" onclick="collapseTerm()"></div>
+    <div class="t-dot td-g" onclick="expandTerm()"></div>
+    <span class="term-title">kathir@portfolio ~ bash</span>
+    <div class="term-bar-acts">
+      <button class="term-btn" onclick="clearTerm()">clear</button>
+      <button class="term-btn" onclick="helpCmd()">help</button>
+    </div>
+  </div>
+  <div class="term-tabs">
+    <div class="term-tab active" id="tab-bash" onclick="switchTab('bash')">bash</div>
+    <div class="term-tab" id="tab-ai" onclick="switchTab('ai')">✦ ask kathir</div>
+  </div>
+  <div id="pane-terminal">
+    <div id="term-body"></div>
+    <div id="term-input-row">
+      <span class="t-prompt-label">kathir@portfolio:~$&nbsp;</span>
+      <input id="term-input" type="text" autocomplete="off" spellcheck="false" placeholder="type a command..."/>
+    </div>
+  </div>
+  <div id="ai-pane">
+    <div id="ai-messages"></div>
+    <div id="ai-input-row">
+      <input id="ai-input" type="text" placeholder="Ask anything about Kathir..." autocomplete="off" spellcheck="false"/>
+      <button id="ai-send" onclick="sendAI()">ask →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── CONFIG: replace after deploying your Worker ──
+const API = (window.__KATHIR_OS_API__ || 'https://kathir-os-api.YOUR-SUBDOMAIN.workers.dev');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+if (API.includes('YOUR-SUBDOMAIN')) {
+  addEventListener('DOMContentLoaded', () => {
+    const b = document.createElement('div');
+    b.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#fb923c;color:#0a0a14;padding:6px 14px;font:11px/1.4 var(--mono,monospace);text-align:center;z-index:99999;';
+    b.textContent = 'setup: set window.__KATHIR_OS_API__ (or edit index.html) to your deployed Worker URL';
+    document.body.appendChild(b);
+  });
+}
+
+/* cursor */
+const cur=document.getElementById('cur'),curR=document.getElementById('cur-r');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cur.style.left=(mx-5)+'px';cur.style.top=(my-5)+'px';});
+(function R(){rx+=(mx-rx)*.11;ry+=(my-ry)*.11;curR.style.left=(rx-16)+'px';curR.style.top=(ry-16)+'px';requestAnimationFrame(R);})();
+
+/* canvas bg */
+const canvas=document.getElementById('canvas-bg'),ctx=canvas.getContext('2d');
+let W,H,bgMode='hero';
+const resize=()=>{W=canvas.width=innerWidth;H=canvas.height=innerHeight;};
+window.addEventListener('resize',resize);resize();
+const P=[];const initP=()=>{P.length=0;const n=Math.min(80,Math.floor(W*H/14000));for(let i=0;i<n;i++)P.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.35,vy:(Math.random()-.5)*.35,r:Math.random()*1.8+.6});};
+initP();window.addEventListener('resize',initP);
+const drawP=(c1='rgba(127,255,178,',c2='rgba(167,139,250,')=>{P.forEach(p=>{p.x+=p.vx;p.y+=p.vy;if(p.x<0)p.x=W;if(p.x>W)p.x=0;if(p.y<0)p.y=H;if(p.y>H)p.y=0;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=c1+'0.7)';ctx.fill();});for(let i=0;i<P.length;i++)for(let j=i+1;j<P.length;j++){const dx=P[i].x-P[j].x,dy=P[i].y-P[j].y,d=Math.sqrt(dx*dx+dy*dy);if(d<140){ctx.beginPath();ctx.moveTo(P[i].x,P[i].y);ctx.lineTo(P[j].x,P[j].y);ctx.strokeStyle=c2+(1-d/140)*.25+')';ctx.lineWidth=.6;ctx.stroke();}}};
+let tC=[];const initC=()=>{tC=Array.from({length:4},(_,i)=>({t:Math.random()*200,speed:.3+Math.random()*.3,yBase:H*.2+i*(H*.18),color:['rgba(127,255,178,','rgba(167,139,250,','rgba(56,189,248,','rgba(251,146,60,'][i]}));};initC();window.addEventListener('resize',initC);
+const drawC=()=>tC.forEach(c=>{c.t+=c.speed;ctx.beginPath();for(let x=0;x<W;x+=4){const y=c.yBase+Math.sin(x/120+c.t/30)*40+Math.sin(x/60+c.t/20)*20+Math.sin(x/30+c.t/15)*10;x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}ctx.strokeStyle=c.color+'.5)';ctx.lineWidth=1.2;ctx.stroke();});
+let starT=0;const STARS=Array.from({length:200},()=>({x:Math.random(),y:Math.random(),r:Math.random()*1.2+.2,o:Math.random()*.7+.1,speed:Math.random()*.003+.001,phase:Math.random()*Math.PI*2}));
+const drawS=()=>{starT+=.008;STARS.forEach(s=>{const a=s.o*(0.6+0.4*Math.sin(starT*s.speed*100+s.phase));ctx.beginPath();ctx.arc(s.x*W,s.y*H,s.r,0,Math.PI*2);ctx.fillStyle=`rgba(221,221,240,${a})`;ctx.fill();});};
+const TK=[];const initT=()=>{TK.length=0;for(let i=0;i<30;i++)TK.push({x:Math.random()*W,y:Math.random()*H,char:['▸','◆','∑','∇','λ','α','β','∂','∞','⟨','⟩','→'][Math.floor(Math.random()*12)],speed:Math.random()*.8+.2,opacity:Math.random()*.4+.1,size:Math.floor(Math.random()*8+10)});};initT();window.addEventListener('resize',initT);
+const drawT=()=>TK.forEach(t=>{t.y-=t.speed;if(t.y<-20)t.y=H+20;ctx.fillStyle=`rgba(127,255,178,${t.opacity})`;ctx.font=`${t.size}px JetBrains Mono`;ctx.fillText(t.char,t.x,t.y);});
+const bgFns={hero:()=>drawP(),feed:()=>drawP('rgba(127,255,178,','rgba(127,255,178,'),about:()=>drawS(),projects:()=>drawC(),research:()=>{drawS();drawP('rgba(167,139,250,','rgba(167,139,250,');},contact:()=>drawT()};
+(function loop(){ctx.clearRect(0,0,W,H);(bgFns[bgMode]||bgFns.hero)();requestAnimationFrame(loop);})();
+const secModes={'s-hero':'hero','s-feed':'feed','s-about':'about','s-projects':'projects','s-research':'research','s-contact':'contact'};
+document.querySelectorAll('.gui-section').forEach(s=>new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){const m=secModes[e.target.id];if(m)bgMode=m;}}),{threshold:.4}).observe(s));
+
+/* scroll reveal */
+const rvIO=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('vis');rvIO.unobserve(e.target);}}),{threshold:.1});
+document.querySelectorAll('.rv').forEach(el=>rvIO.observe(el));
+
+/* uptime */
+const START=Date.now();
+setInterval(()=>{const s=Math.floor((Date.now()-START)/1000),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sc=s%60;document.getElementById('uptime-el').textContent=`uptime: ${h}h ${m}m ${sc}s`;},1000);
+
+/* time ago */
+const timeAgo=ts=>{const s=Math.floor((Date.now()-new Date(ts))/1000);if(s<60)return`${s}s ago`;if(s<3600)return`${Math.floor(s/60)}m ago`;if(s<86400)return`${Math.floor(s/3600)}h ago`;return`${Math.floor(s/86400)}d ago`;};
+
+/* live feed */
+async function loadFeed(){
+  if(document.hidden)return;
+  try{
+    const r=await fetch(`${API}/feed`);
+    if(!r.ok)throw new Error();
+    const d=await r.json();
+    renderActivity(d.activity||[]);
+    if(d.status?.text)document.getElementById('nav-status-text').textContent=d.status.text;
+    renderPapers(d.papers||[]);
+  }catch{document.getElementById('activity-feed').innerHTML='<div class="feed-empty">deploy Workers to see live data</div>';}
+  try{const r=await fetch(`${API}/logs`);const d=await r.json();renderLogs(d.entries||[]);}catch{}
+}
+const renderActivity=items=>{
+  const el=document.getElementById('activity-feed');
+  if(!items.length){el.innerHTML='<div class="feed-empty">no activity yet</div>';return;}
+  el.innerHTML=items.slice(0,8).map(i=>`<div class="feed-item"><div class="fi-src ${i.source==='github'?'gh':'hf'}">${esc(i.source)} · ${esc(i.repo||'')}</div><div class="fi-msg">${esc(i.message)}</div><div class="fi-time">${esc(timeAgo(i.ts))}</div></div>`).join('');
+};
+const renderLogs=entries=>{
+  const el=document.getElementById('logs-feed');
+  if(!entries.length){el.innerHTML='<div class="feed-empty">push .md files to logs/ in R2</div>';return;}
+  el.innerHTML=entries.slice(0,5).map(e=>`<div class="log-entry" data-date="${esc(e.date)}"><div class="log-date">${esc(e.date)}</div><div class="log-preview">tap to read →</div></div>`).join('');
+  el.querySelectorAll('.log-entry').forEach(node=>node.addEventListener('click',()=>openLog(node.dataset.date)));
+};
+const renderPapers=papers=>{
+  const el=document.getElementById('papers-feed');
+  if(!papers.length){el.innerHTML='<div class="feed-empty">agent fetches papers at 07:00 UTC</div>';return;}
+  el.innerHTML=papers.map(p=>`<div class="paper-item"><div class="paper-title">${esc(p.title)}</div><div class="paper-why">${esc(p.why)}</div><a class="paper-link" href="${esc(p.url)}" target="_blank" rel="noopener noreferrer">arxiv →</a></div>`).join('');
+};
+loadFeed();setInterval(loadFeed,5*60*1000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)loadFeed();});
+
+async function openLog(date){
+  try{
+    const r=await fetch(`${API}/logs/${date}`);const d=await r.json();
+    showTerm();switchTab('bash');clearTerm();
+    d.content.split('\n').forEach(l=>print(l,'t-out',true));
+  }catch{print('Failed to load log.','t-out err');}
+}
+
+/* terminal */
+const termWrap=document.getElementById('term-wrap'),termBody=document.getElementById('term-body'),termInput=document.getElementById('term-input');
+let collapsed=false,cmdHistory=[],histIdx=-1;
+const showTerm=()=>{termWrap.classList.remove('hidden');};
+const closeTerm=()=>termWrap.classList.add('hidden');
+const collapseTerm=()=>{collapsed=true;termWrap.classList.add('collapsed');};
+const expandTerm=()=>{collapsed=false;termWrap.classList.remove('collapsed');termInput.focus();};
+document.getElementById('term-toggle').onclick=()=>{termWrap.classList.toggle('hidden');if(!termWrap.classList.contains('hidden')){switchTab('bash');termInput.focus();}};
+
+let drag=false,dox=0,doy=0;
+document.getElementById('term-bar').addEventListener('mousedown',e=>{if(e.target.classList.contains('t-dot')||e.target.classList.contains('term-btn')||e.target.classList.contains('term-tab'))return;drag=true;const r=termWrap.getBoundingClientRect();dox=e.clientX-r.left;doy=e.clientY-r.top;termWrap.style.transition='none';});
+window.addEventListener('mousemove',e=>{if(!drag)return;let nx=e.clientX-dox,ny=e.clientY-doy;nx=Math.max(0,Math.min(nx,innerWidth-termWrap.offsetWidth));ny=Math.max(0,Math.min(ny,innerHeight-termWrap.offsetHeight));termWrap.style.right='auto';termWrap.style.bottom='auto';termWrap.style.left=nx+'px';termWrap.style.top=ny+'px';});
+window.addEventListener('mouseup',()=>{drag=false;termWrap.style.transition='';});
+
+function switchTab(tab){
+  document.getElementById('pane-terminal').classList.toggle('hidden',tab!=='bash');
+  document.getElementById('ai-pane').classList.toggle('visible',tab==='ai');
+  document.getElementById('tab-bash').classList.toggle('active',tab==='bash');
+  document.getElementById('tab-ai').classList.toggle('active',tab==='ai');
+  if(tab==='bash')termInput.focus();else document.getElementById('ai-input').focus();
+}
+
+const print=(text,cls='t-out',pre=false)=>{const d=document.createElement('div');d.className=cls+(pre?' pre':'');d.textContent=text;termBody.appendChild(d);termBody.scrollTop=termBody.scrollHeight;};
+const printHTML=html=>{const d=document.createElement('div');d.className='t-out';d.innerHTML=html;termBody.appendChild(d);termBody.scrollTop=termBody.scrollHeight;};
+const printLine=()=>print('');
+const printCmd=cmd=>print(`kathir@portfolio:~$ ${cmd}`,'t-out w');
+const clearTerm=()=>{termBody.innerHTML='';};
+
+/* boot */
+[['',''],['  ██╗  ██╗██╗  ██╗███████╗','t-out g'],['  ██║ ██╔╝██║ ██╔╝██╔════╝','t-out g'],['  █████╔╝ █████╔╝ ███████╗','t-out g'],['  ██╔═██╗ ██╔═██╗ ╚════██║','t-out g'],['  ██║  ██╗██║  ██╗███████║','t-out g'],['  ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝','t-out g'],['',''],['  kathir-os v2.0 — live portfolio system','t-out w'],['  Cloudflare Workers + R2 + Gemini 2.0 Flash','t-out'],['',''],['  Type "help" for commands. "ask" tab → AI chat.','t-out b'],['','']]
+  .forEach(([t,c],i)=>setTimeout(()=>print(t,c||'t-out',true),i*50));
+
+function helpCmd(){
+  printLine();print('  Available commands:','t-out w');printLine();
+  [['status','Current focus (live from R2)'],['feed','Live GitHub + HF activity'],
+   ['logs','Recent research log entries'],['papers','Today\'s arXiv picks'],
+   ['ask <q>','Quick AI question in terminal'],['about','About me'],['skills','Tech skills'],
+   ['projects','Projects list'],['neofetch','System info'],['ls / cd / cat','Portfolio filesystem'],
+   ['theme <name>','Change theme (matrix/ocean/fire/default)'],['goto <section>','Scroll GUI to section'],
+   ['matrix','🥚'],['sudo hire kathir','🥚'],['clear','Clear'],
+  ].forEach(([c,d])=>{const el=document.createElement('div');el.className='t-out';el.innerHTML=`  <span style="color:var(--accent);display:inline-block;min-width:160px">${c}</span><span style="color:var(--muted)">${d}</span>`;termBody.appendChild(el);});
+  printLine();termBody.scrollTop=termBody.scrollHeight;
+}
+
+async function liveCmd(endpoint,label){
+  print(`  Fetching ${label}...`,'t-out');
+  try{
+    const r=await fetch(`${API}${endpoint}`);const d=await r.json();printLine();
+    if(endpoint==='/status'){print(`  Focus : ${d.text||'—'}`,'t-out g',true);print(`  Repo  : ${d.repo||'—'}`,'t-out',true);print(`  Age   : ${d.updated?timeAgo(d.updated):'—'}`,'t-out',true);}
+    else if(endpoint==='/feed'){(d.activity||[]).slice(0,5).forEach(i=>{print(`  [${i.source}] ${i.message}`,'t-out g',true);print(`         ${timeAgo(i.ts)}`,'t-out',true);});}
+    else if(endpoint==='/logs'){(d.entries||[]).slice(0,8).forEach(e=>print(`  ${e.date}`,'t-out g',true));print('','t-out');print('  cat <date> to read a log','t-out');}
+    else if(endpoint==='/papers'){(d.papers||[]).forEach((p,i)=>{print(`  ${i+1}. ${p.title}`,'t-out w',true);print(`     ${p.why}`,'t-out',true);print(`     ${p.url}`,'t-out b',true);printLine();});}
+    printLine();
+  }catch{print(`  Could not reach API — deploy Workers first.`,'t-out err');}
+}
+
+async function askTermCmd(q){
+  if(!q){print('  Usage: ask <question>','t-out err');return;}
+  print('  Thinking...','t-out');
+  try{
+    const r=await fetch(`${API}/ask`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q})});
+    const d=await r.json();
+    if(d.error){print(`  Error: ${d.error}`,'t-out err');return;}
+    printLine();d.answer.split('\n').forEach(l=>print('  '+l,'t-out g',true));printLine();
+  }catch{print('  Could not reach AI.','t-out err');}
+}
+
+function neofetch(){
+  printLine();
+  [`<span style="color:var(--accent)">  kathir</span><span style="color:var(--muted)">@portfolio</span>`,
+   `  ─────────────────────────────`,
+   `  <span style="color:var(--accent2)">OS</span>       kathir-os v2.0`,
+   `  <span style="color:var(--accent2)">Backend</span>  Cloudflare Workers`,
+   `  <span style="color:var(--accent2)">Storage</span>  R2 (10GB free)`,
+   `  <span style="color:var(--accent2)">AI</span>       Gemini 2.0 Flash`,
+   `  <span style="color:var(--accent2)">Agents</span>   4 cron jobs running`,
+   `  <span style="color:var(--accent2)">Mission</span>  Bell Labs v2.0 🇮🇳`,
+   `  `,
+   `  <span style="background:var(--accent);color:#000;padding:0 4px">▓</span><span style="background:var(--accent2);padding:0 4px"> </span><span style="background:var(--accent3);padding:0 4px"> </span><span style="background:var(--accent4);padding:0 4px"> </span>`,
+  ].forEach(l=>{const d=document.createElement('div');d.className='t-out';d.innerHTML='  '+l;termBody.appendChild(d);});
+  printLine();termBody.scrollTop=termBody.scrollHeight;
+}
+
+const THEMES={matrix:{'--accent':'#00ff41','--accent2':'#00cc33','--accent3':'#33ff66','--accent4':'#99ff99'},ocean:{'--accent':'#38bdf8','--accent2':'#818cf8','--accent3':'#34d399','--accent4':'#f472b6'},fire:{'--accent':'#fb923c','--accent2':'#f87171','--accent3':'#fbbf24','--accent4':'#e879f9'},default:{'--accent':'#7fffb2','--accent2':'#a78bfa','--accent3':'#38bdf8','--accent4':'#fb923c'}};
+const applyTheme=n=>{const t=THEMES[n];if(!t){print(`  Themes: ${Object.keys(THEMES).join(', ')}`,'t-out err');return;}Object.entries(t).forEach(([k,v])=>document.documentElement.style.setProperty(k,v));print(`  Theme: ${n}`,'t-out g');};
+
+let matrixOn=false;
+function matrixRain(){if(matrixOn)return;matrixOn=true;print('  Press any key to stop.','t-out g');const ov=document.createElement('div');ov.style.cssText='position:fixed;inset:0;z-index:800;background:#000;';const mc=document.createElement('canvas');mc.style.cssText='width:100%;height:100%;';ov.appendChild(mc);document.body.appendChild(ov);mc.width=innerWidth;mc.height=innerHeight;const cols=Math.floor(mc.width/16),drops=Array(cols).fill(1),chars='アイウエオ0123456789ABCDEF∇λα'.split('');const mctx=mc.getContext('2d');const m=setInterval(()=>{mctx.fillStyle='rgba(0,0,0,.06)';mctx.fillRect(0,0,mc.width,mc.height);mctx.fillStyle='#00ff41';mctx.font='14px JetBrains Mono';drops.forEach((y,i)=>{mctx.fillText(chars[Math.floor(Math.random()*chars.length)],i*16,y*16);if(y*16>mc.height&&Math.random()>.975)drops[i]=0;drops[i]++;});},50);const stop=()=>{clearInterval(m);ov.remove();matrixOn=false;document.removeEventListener('keydown',stop);};setTimeout(()=>document.addEventListener('keydown',stop),400);}
+
+const FS={'~':['about.txt','skills/','projects/','logs/','contact.txt','.secret/'],'skills':['languages.txt','frameworks.txt','tools.txt'],'projects':['fineweb-hindi.txt','gemma-hindi.txt','jump-relu-sae.txt','arc-agi.txt']};
+const FC={'about.txt':['','  Kathir K S — AI Researcher, 22, Madurai','  Mission: Bell Labs v2.0 in India 🇮🇳','  Contact: kathirksw@gmail.com',''],'contact.txt':['','  Email: kathirksw@gmail.com','  GitHub: github.com/kathir-ks','  HF: huggingface.co/KathirKs','']};
+let cwd='~';
+
+async function runCmd(raw){
+  const cmd=raw.trim();if(!cmd)return;
+  cmdHistory.unshift(cmd);histIdx=-1;printCmd(cmd);
+  const[c,...args]=cmd.toLowerCase().split(' ');const rest=args.join(' ');
+  switch(c){
+    case 'help':helpCmd();break;
+    case 'clear':clearTerm();break;
+    case 'status':await liveCmd('/status','status');break;
+    case 'feed':await liveCmd('/feed','feed');break;
+    case 'logs':await liveCmd('/logs','logs');break;
+    case 'papers':await liveCmd('/papers','papers');break;
+    case 'ask':await askTermCmd(rest);break;
+    case 'about':FC['about.txt'].forEach(l=>print(l,'t-out',true));break;
+    case 'contact':FC['contact.txt'].forEach(l=>print(l,'t-out',true));break;
+    case 'skills':print('  JAX · Python · C++ · Transformers · Mech.Interp · TPU · FSDP · LoRA · Linux · VxWorks','t-out g');break;
+    case 'projects':print('  goto projects — or ls projects/ then cat projects/<name>.txt','t-out');break;
+    case 'neofetch':neofetch();break;
+    case 'ls':{const items=FS[rest||cwd]||FS['~'];printLine();items.forEach(i=>{const d=document.createElement('div');d.className='t-out';d.innerHTML=`  <span style="color:${i.endsWith('/')?'var(--accent3)':'var(--text)'}">${i}</span>`;termBody.appendChild(d);});printLine();termBody.scrollTop=termBody.scrollHeight;break;}
+    case 'cd':{const t=rest||'~';if(t==='~'||t==='..')cwd='~';else if(FS[t])cwd=t;else{print(`  No such directory: ${t}`,'t-out err');break;}print(`  /home/kathir/${cwd==='~'?'':cwd}`,'t-out g');break;}
+    case 'pwd':print(`  /home/kathir/${cwd==='~'?'':cwd}`,'t-out g');break;
+    case 'cat':{const f=rest.split('/').pop();const content=FC[f];if(content)content.forEach(l=>print(l,'t-out',true));else if(rest.startsWith('logs/'))openLog(rest.replace('logs/',''));else print(`  No such file: ${rest}`,'t-out err');break;}
+    case 'theme':applyTheme(rest||'default');break;
+    case 'goto':{const map={about:'#s-about',projects:'#s-projects',research:'#s-research',contact:'#s-contact',feed:'#s-feed',hero:'#s-hero'};const id=map[rest];if(id){document.querySelector(id).scrollIntoView({behavior:'smooth'});print(`  → ${rest}`,'t-out g');}else print(`  Try: ${Object.keys(map).join(', ')}`,'t-out err');break;}
+    case 'matrix':matrixRain();break;
+    case 'history':printLine();cmdHistory.slice(0,15).forEach((h,i)=>print(`  ${i+1}  ${h}`,'t-out'));printLine();break;
+    case 'whoami':print('  kathir — building frontier AI from India 🇮🇳','t-out g');break;
+    case 'sudo':if(rest==='hire kathir'){printLine();print('  🎉 EXCELLENT DECISION','t-out g');print('  → kathirksw@gmail.com','t-out b');for(let i=0;i<4;i++)setTimeout(()=>print('  🎊'.repeat(4),'t-out'),i*150);}else print('  Permission denied 😏','t-out err');break;
+    case 'exit':closeTerm();break;
+    default:print(`  bash: ${c}: command not found. Type 'help'`,'t-out err');
+  }
+}
+
+termInput.addEventListener('keydown',e=>{
+  if(e.key==='Enter'){runCmd(termInput.value);termInput.value='';}
+  else if(e.key==='ArrowUp'){e.preventDefault();histIdx=Math.min(histIdx+1,cmdHistory.length-1);termInput.value=cmdHistory[histIdx]||'';}
+  else if(e.key==='ArrowDown'){e.preventDefault();histIdx=Math.max(histIdx-1,-1);termInput.value=histIdx>=0?cmdHistory[histIdx]:'';}
+  else if(e.key==='Tab'){e.preventDefault();const all=['help','about','skills','projects','status','feed','logs','papers','ask','neofetch','ls','cd','cat','pwd','theme','goto','matrix','history','clear','sudo','exit','whoami'];const m=all.filter(x=>x.startsWith(termInput.value));if(m.length===1)termInput.value=m[0]+' ';else if(m.length>1)print('  '+m.join('  '),'t-out');}
+});
+termBody.addEventListener('click',()=>{if(!collapsed)termInput.focus();});
+setTimeout(()=>termInput.focus(),700);
+
+/* AI chat */
+let aiHistory=[];
+async function sendAI(){
+  const q=document.getElementById('ai-input').value.trim();if(!q)return;
+  document.getElementById('ai-input').value='';
+  appendAI('user',q);const thinking=appendAI('assistant','thinking...',true);
+  try{
+    const r=await fetch(`${API}/ask`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q,history:aiHistory})});
+    const d=await r.json();thinking.remove();
+    if(d.error)appendAI('assistant',`Error: ${d.error}`);
+    else{appendAI('assistant',d.answer);aiHistory.push({role:'user',content:q},{role:'assistant',content:d.answer});if(aiHistory.length>12)aiHistory=aiHistory.slice(-12);}
+  }catch(e){thinking.remove();appendAI('assistant','Could not reach AI — update the API URL in the config.');}
+}
+const appendAI=(role,text,thinking=false)=>{const msgs=document.getElementById('ai-messages');const d=document.createElement('div');d.className=`ai-msg ${role}${thinking?' thinking':''}`;d.textContent=text;msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;return d;};
+document.getElementById('ai-input').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendAI();}});
+
+console.log('%c👋 You found the console!','color:#7fffb2;font-size:16px;font-family:monospace');
+console.log('%cYou\'re exactly the kind of person Kathir wants to meet.','color:#a78bfa;font-family:monospace');
+console.log('%ckathirksw@gmail.com','color:#38bdf8;font-family:monospace');
+</script>
 </body>
 </html>

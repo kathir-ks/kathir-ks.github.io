@@ -1,0 +1,25 @@
+name = "kathir-os-agents"
+main = "index.js"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "kathir-os"
+
+[vars]
+GH_USERNAME = "kathir-ks"
+HF_USERNAME = "KathirKs"
+LLM_PROVIDER = "gemini"
+
+# Secrets — set via `wrangler secret put`:
+#   GEMINI_KEY / OPENAI_KEY / ANTHROPIC_KEY
+#   GITHUB_TOKEN
+
+[triggers]
+crons = [
+  "*/15 * * * *",   # GitHub + HF sync every 15 min
+  "0 * * * *",      # Hourly GitHub-only refresh (cheap status update)
+  "0 6 * * *",      # Daily digest at 06:00 UTC
+  "0 7 * * *",      # Paper monitor at 07:00 UTC
+]

@@ -1,0 +1,38 @@
+name: Deploy Cloudflare Workers
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'workers/**'
+      - '.github/workflows/deploy-workers.yml'
+  workflow_dispatch:
+    inputs:
+      worker:
+        description: 'Which worker to deploy (api, agents, mcp, or all)'
+        required: true
+        default: 'all'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        worker: [api, agents, mcp]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Skip if not selected
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.worker != 'all' && github.event.inputs.worker != matrix.worker }}
+        run: echo "skip=true" >> $GITHUB_ENV
+      - name: Deploy ${{ matrix.worker }}
+        if: env.skip != 'true'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: workers/${{ matrix.worker }}
+          command: deploy
