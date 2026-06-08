@@ -355,7 +355,7 @@ footer a:hover{color:var(--accent);}
 
 <script>
 // ── CONFIG: replace after deploying your Worker ──
-const API = (window.__KATHIR_OS_API__ || 'https://kathir-os-api.YOUR-SUBDOMAIN.workers.dev');
+const API = (window.__KATHIR_OS_API__ || 'https://kathir-os-api.kathirksw.workers.dev');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 if (API.includes('YOUR-SUBDOMAIN')) {
   addEventListener('DOMContentLoaded', () => {

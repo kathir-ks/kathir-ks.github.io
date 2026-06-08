@@ -1,16 +1,14 @@
-/**
- * Kathir OS — Agents Worker (cron only)
- *
- * Triggers (see wrangler.toml):
- *   */15 * * * *  GitHub + HF sync
- *   0   * * * *  Status sync (light GitHub refresh)
- *   0   6 * * *  Daily digest (yesterday's activity → log entry)
- *   0   7 * * *  Paper monitor (arXiv → top 3 via LLM)
- *
- * Env bindings:
- *   R2, GITHUB_TOKEN, GH_USERNAME, HF_USERNAME,
- *   LLM_PROVIDER + provider key (GEMINI_KEY / OPENAI_KEY / ANTHROPIC_KEY)
- */
+// Kathir OS — Agents Worker (cron only)
+//
+// Triggers (see wrangler.toml):
+//   */15 * * * *   GitHub + HF sync
+//   0   * * * *   Status sync (light GitHub refresh)
+//   0   6 * * *   Daily digest (yesterday's activity -> log entry)
+//   0   7 * * *   Paper monitor (arXiv -> top 3 via LLM)
+//
+// Env bindings:
+//   R2, GITHUB_TOKEN, GH_USERNAME, HF_USERNAME,
+//   LLM_PROVIDER + provider key (GEMINI_KEY / OPENAI_KEY / ANTHROPIC_KEY)
 
 import { chat } from "../lib/llm.js";
 import { mergedActivity, refreshGitHub, refreshHuggingFace } from "../lib/refresh.js";
