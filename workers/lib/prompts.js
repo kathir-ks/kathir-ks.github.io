@@ -13,7 +13,6 @@ const FACTS = `Kathir K S — AI researcher and systems engineer from Madurai, T
 - Day job: Soliton Technologies (embedded systems, VxWorks RTOS, embedded C++).
 - Core work: frontier AI research — mechanistic interpretability, large-scale pretraining,
   TPU infrastructure.
-- Long-term mission: found a Bell Labs-style fundamental research institution in India.
 
 Key projects:
 - FineWeb-Edu-Hindi: ~300B token Hindi pretraining dataset (KathirKs/fineweb-edu-hindi on
@@ -23,11 +22,10 @@ Key projects:
   with straight-through estimators.
 - ARC-AGI pipeline: distributed JAX inference for Qwen on TPU pods, KV caching, activation
   extraction from layer 29 MLP, LoRA fine-tuning with Unsloth.
-- CAP-FL: Context-Aware Federated Learning with DistilGPT-2 on Shakespeare data.
 - V8 → Rust agent: experimental AI-assisted C++-to-Rust conversion of V8 (~8M LoC).
 
 Stack: JAX/XLA, Python, C/C++, distributed training (FSDP, pipeline parallelism),
-TPU infrastructure (v3/v4/v5e/v6e), mechanistic interpretability, federated learning,
+TPU infrastructure (v3/v4/v5e/v6e), mechanistic interpretability,
 Linux kernel, VxWorks, embedded C++.
 
 Contact: kathirksw@gmail.com · github.com/kathir-ks · linkedin.com/in/kathirks ·
