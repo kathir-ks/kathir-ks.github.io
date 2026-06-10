@@ -17,7 +17,6 @@ const ARXIV_QUERIES = [
   "mechanistic interpretability transformer",
   "sparse autoencoders features superposition",
   "Hindi language model pretraining",
-  "federated learning language model",
   "JAX TPU distributed training",
 ];
 
@@ -131,7 +130,7 @@ async function runPaperMonitor(env) {
     .join("\n\n");
 
   const prompt = `Kathir K S is an AI researcher focused on: mechanistic interpretability, sparse autoencoders,
-Hindi language models, federated learning, JAX/TPU infrastructure, and ARC-AGI.
+Hindi language models, JAX/TPU infrastructure, and ARC-AGI.
 
 From this list of recent arXiv papers, pick the 3 most relevant to his work and explain
 in one sentence each why it matters to him. Return ONLY valid JSON array, no other text:
