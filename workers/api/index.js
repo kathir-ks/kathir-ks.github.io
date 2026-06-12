@@ -10,6 +10,20 @@
  *   POST /ask               → { answer }
  *   POST /refresh           → { ok, refreshed }    (Authorization: Bearer <ADMIN_TOKEN>)
  *
+ *   GET    /posts                 → { posts }                (thoughts index)
+ *   GET    /posts/:slug           → full post, revision meta only
+ *   GET    /posts/:slug/history   → { revisions: [{ts, note, body}] }
+ *   POST   /posts                 → create   (admin)
+ *   PUT    /posts/:slug           → revise, requires changelog `note` (admin)
+ *   DELETE /posts/:slug           → delete   (admin)
+ *
+ *   GET  /jarvis            → { online, lastSeen, status, tasks }
+ *   POST /jarvis/sync       → bridge heartbeat + task log     (admin)
+ *
+ *   GET  /epistemic/graph     → { nodes, edges, updated } | null
+ *   GET  /epistemic/learning  → { items, updated } | null
+ *   POST /epistemic/sync      → { graph?, learning? }         (admin)
+ *
  * Env bindings (set in wrangler.toml / `wrangler secret put`):
  *   R2             — R2 bucket binding "kathir-os"
  *   GITHUB_TOKEN   — for refreshGitHub
@@ -23,10 +37,11 @@
 import { chat } from "../lib/llm.js";
 import { WEBSITE_SYSTEM_PROMPT } from "../lib/prompts.js";
 import { refreshGitHub, refreshHuggingFace, mergedActivity } from "../lib/refresh.js";
+import { listPosts, getPost, getHistory, createPost, updatePost, deletePost } from "../lib/posts.js";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
@@ -55,6 +70,36 @@ export default {
     if (path === "/papers" && method === "GET") return handlePapers(env);
     if (path === "/ask" && method === "POST") return handleAsk(request, env, ctx);
     if (path === "/refresh" && method === "POST") return handleRefresh(request, env);
+
+    // Thoughts / posts
+    if (path === "/posts" && method === "GET") return json({ posts: await listPosts(env.R2) });
+    if (path === "/posts" && method === "POST") return withAdmin(request, env, () => handlePostWrite(request, env, "create"));
+    const postMatch = path.match(/^\/posts\/([a-z0-9-]+)(\/history)?$/);
+    if (postMatch) {
+      const [, slug, history] = postMatch;
+      if (method === "GET" && history) {
+        const h = await getHistory(env.R2, slug);
+        return h ? json(h) : err("Post not found", 404);
+      }
+      if (method === "GET") {
+        const p = await getPost(env.R2, slug);
+        return p ? json(p) : err("Post not found", 404);
+      }
+      if (method === "PUT" && !history) return withAdmin(request, env, () => handlePostWrite(request, env, "update", slug));
+      if (method === "DELETE" && !history) return withAdmin(request, env, async () => {
+        const r = await deletePost(env.R2, slug);
+        return r.error ? err(r.error, r.status || 400) : json(r);
+      });
+    }
+
+    // Jarvis (display-only: bridge pushes state, site reads it)
+    if (path === "/jarvis" && method === "GET") return handleJarvis(env);
+    if (path === "/jarvis/sync" && method === "POST") return withAdmin(request, env, () => handleJarvisSync(request, env));
+
+    // Epistemic feed exports
+    if (path === "/epistemic/graph" && method === "GET") return json(await readJson(env.R2, "epistemic/graph.json"));
+    if (path === "/epistemic/learning" && method === "GET") return json(await readJson(env.R2, "epistemic/learning.json"));
+    if (path === "/epistemic/sync" && method === "POST") return withAdmin(request, env, () => handleEpistemicSync(request, env));
 
     return err("Not found", 404);
   },
@@ -166,7 +211,114 @@ async function handleRefresh(request, env) {
   return json({ ok: true, refreshed: new Date().toISOString() });
 }
 
+// ── /posts write handlers ─────────────────────────────────────
+async function handlePostWrite(request, env, mode, slug) {
+  let body;
+  try { body = await request.json(); } catch { return err("Invalid JSON"); }
+  const r = mode === "create"
+    ? await createPost(env.R2, body)
+    : await updatePost(env.R2, slug, body);
+  return r.error ? err(r.error, r.status || 400) : json(r);
+}
+
+// ── /jarvis ───────────────────────────────────────────────────
+const JARVIS_ONLINE_WINDOW_MS = 3 * 60 * 1000;
+
+async function handleJarvis(env) {
+  const state = await readJson(env.R2, "jarvis/state.json");
+  if (!state) return json({ online: false, lastSeen: null, status: null, tasks: [] });
+  const online = state.lastSeen
+    ? Date.now() - new Date(state.lastSeen).getTime() < JARVIS_ONLINE_WINDOW_MS
+    : false;
+  return json({
+    online,
+    lastSeen: state.lastSeen || null,
+    status: state.status || null,
+    tasks: (state.tasks || []).slice(0, 30),
+  });
+}
+
+async function handleJarvisSync(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return err("Invalid JSON"); }
+  const state = {
+    lastSeen: new Date().toISOString(),
+    status: typeof body.status === "string" ? body.status.slice(0, 200) : null,
+    tasks: Array.isArray(body.tasks)
+      ? body.tasks.slice(0, 50).map(t => ({
+          ts: t.ts || null,
+          task: String(t.task || "").slice(0, 300),
+          status: String(t.status || "").slice(0, 40),
+          duration: typeof t.duration === "number" ? t.duration : null,
+        }))
+      : [],
+  };
+  await env.R2.put("jarvis/state.json", JSON.stringify(state), {
+    httpMetadata: { contentType: "application/json" },
+  });
+  return json({ ok: true, lastSeen: state.lastSeen });
+}
+
+// ── /epistemic/sync ───────────────────────────────────────────
+async function handleEpistemicSync(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return err("Invalid JSON"); }
+  const written = [];
+  const ts = new Date().toISOString();
+
+  if (body.graph) {
+    const { nodes, edges } = body.graph;
+    if (!Array.isArray(nodes) || !Array.isArray(edges)) return err("graph needs nodes[] and edges[]");
+    if (nodes.length > 500 || edges.length > 2000) return err("graph too large (max 500 nodes / 2000 edges)");
+    const graph = {
+      updated: ts,
+      nodes: nodes.map(n => ({
+        id: String(n.id).slice(0, 80),
+        label: String(n.label || n.id).slice(0, 120),
+        kind: String(n.kind || "topic").slice(0, 30),
+        weight: typeof n.weight === "number" ? n.weight : 1,
+      })),
+      edges: edges.map(e => ({
+        source: String(e.source).slice(0, 80),
+        target: String(e.target).slice(0, 80),
+        weight: typeof e.weight === "number" ? e.weight : 1,
+      })),
+    };
+    await env.R2.put("epistemic/graph.json", JSON.stringify(graph), {
+      httpMetadata: { contentType: "application/json" },
+    });
+    written.push("graph");
+  }
+
+  if (body.learning) {
+    const items = Array.isArray(body.learning.items) ? body.learning.items : body.learning;
+    if (!Array.isArray(items)) return err("learning needs items[]");
+    const learning = {
+      updated: ts,
+      items: items.slice(0, 10).map(i => ({
+        topic: String(i.topic || "").slice(0, 120),
+        summary: String(i.summary || "").slice(0, 300),
+        url: typeof i.url === "string" ? i.url.slice(0, 300) : null,
+      })),
+    };
+    await env.R2.put("epistemic/learning.json", JSON.stringify(learning), {
+      httpMetadata: { contentType: "application/json" },
+    });
+    written.push("learning");
+  }
+
+  if (!written.length) return err("Nothing to sync — send graph and/or learning");
+  return json({ ok: true, written, updated: ts });
+}
+
 // ── Helpers ───────────────────────────────────────────────────
+
+async function withAdmin(request, env, fn) {
+  const auth = request.headers.get("Authorization") || "";
+  const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+  if (!env.ADMIN_TOKEN || token !== env.ADMIN_TOKEN) return err("Unauthorized", 401);
+  return fn();
+}
 
 async function readJson(bucket, key) {
   try {

@@ -1,0 +1,22 @@
+# systemd user service for kos-bridge.
+#
+# Install:
+#   mkdir -p ~/.config/systemd/user
+#   cp tools/kos-bridge.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now kos-bridge
+#
+# Secrets live in ~/.kos/config.json (chmod 600), NOT in this unit file:
+#   { "KATHIR_OS_ADMIN_TOKEN": "...", "JARVIS_AGENT_ID": "..." }
+
+[Unit]
+Description=Kathir OS bridge (jarvis heartbeat + epistemic sync)
+After=network-online.target
+
+[Service]
+ExecStart=/usr/bin/python3 %h/kathir-ks.github.io/tools/kos-bridge.py
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=default.target

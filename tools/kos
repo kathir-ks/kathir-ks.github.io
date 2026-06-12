@@ -1,0 +1,269 @@
+#!/usr/bin/env python3
+"""
+kos — Kathir OS command line.
+
+Publish thoughts, submit Jarvis tasks, and sync epistemic-feed exports
+to the Cloudflare Worker backend. Stdlib only (works on system python3).
+
+Config (env or ~/.kos/config.json):
+  KATHIR_OS_API           Worker base URL   (default: https://kathir-os-api.kathirksw.workers.dev)
+  KATHIR_OS_ADMIN_TOKEN   Bearer token for admin routes (required for writes)
+  JARVIS_URL              Jarvis FastAPI base (default: http://localhost:8000)
+  JARVIS_AGENT_ID         Agent id to submit tasks to
+  EPISTEMIC_URL           epistemic-feed base (default: http://localhost:3000)
+
+Usage:
+  kos list
+  kos show <slug>
+  kos post <file.md> [--title T] [--kind thought|post] [--slug S]
+  kos edit <slug> <file.md> --note "what changed"
+  kos delete <slug>
+  kos jarvis "<task>"          # submit to local Jarvis, record for the site
+  kos jarvis-sync              # push heartbeat + task log to the Worker
+  kos epistemic-sync           # export graph/learning from epistemic-feed → Worker
+"""
+
+import argparse, json, os, pathlib, re, sys, time, urllib.error, urllib.request
+
+KOS_DIR = pathlib.Path.home() / ".kos"
+TASK_LOG = KOS_DIR / "jarvis-tasks.json"
+
+
+def load_config():
+    cfg = {}
+    cfg_file = KOS_DIR / "config.json"
+    if cfg_file.exists():
+        try:
+            cfg = json.loads(cfg_file.read_text())
+        except Exception:
+            pass
+    def get(key, default=None):
+        return os.environ.get(key, cfg.get(key, default))
+    return {
+        "api": (get("KATHIR_OS_API", "https://kathir-os-api.kathirksw.workers.dev")).rstrip("/"),
+        "token": get("KATHIR_OS_ADMIN_TOKEN"),
+        "jarvis": (get("JARVIS_URL", "http://localhost:8000")).rstrip("/"),
+        "agent_id": get("JARVIS_AGENT_ID"),
+        "epistemic": (get("EPISTEMIC_URL", "http://localhost:3000")).rstrip("/"),
+    }
+
+
+CFG = load_config()
+
+
+def http(method, url, body=None, token=None, timeout=30):
+    data = json.dumps(body).encode() if body is not None else None
+    req = urllib.request.Request(url, data=data, method=method)
+    req.add_header("Content-Type", "application/json")
+    if token:
+        req.add_header("Authorization", f"Bearer {token}")
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return r.status, json.loads(r.read().decode() or "null")
+    except urllib.error.HTTPError as e:
+        try:
+            return e.code, json.loads(e.read().decode())
+        except Exception:
+            return e.code, {"error": str(e)}
+    except Exception as e:
+        return 0, {"error": str(e)}
+
+
+def api(method, path, body=None, admin=False):
+    token = CFG["token"] if admin else None
+    if admin and not token:
+        die("KATHIR_OS_ADMIN_TOKEN not set (env or ~/.kos/config.json)")
+    status, data = http(method, CFG["api"] + path, body, token)
+    if status == 0 or status >= 400:
+        die(f"API {method} {path} failed ({status}): {data.get('error', data)}")
+    return data
+
+
+def die(msg):
+    print(f"kos: {msg}", file=sys.stderr)
+    sys.exit(1)
+
+
+def title_from_md(text, fallback):
+    m = re.search(r"^#\s+(.+)$", text, re.M)
+    return m.group(1).strip() if m else fallback
+
+
+# ── thoughts ──────────────────────────────────────────────────
+
+def cmd_list(_):
+    posts = api("GET", "/posts").get("posts", [])
+    if not posts:
+        print("no posts yet")
+        return
+    for p in posts:
+        print(f"{p['updated'][:10]}  v{p['revCount']:<2} [{p['kind']:7}] {p['slug']:32} {p['title']}")
+
+
+def cmd_show(args):
+    p = api("GET", f"/posts/{args.slug}")
+    print(f"# {p['title']}  ({p['kind']}, v{len(p['revisions'])})\n")
+    print(p["body"])
+    print("\n-- changelog --")
+    for r in p["revisions"]:
+        print(f"  {r['ts'][:16]}  {r['note']}")
+
+
+def cmd_post(args):
+    body = pathlib.Path(args.file).read_text()
+    title = args.title or title_from_md(body, pathlib.Path(args.file).stem.replace("-", " "))
+    payload = {"title": title, "body": body, "kind": args.kind}
+    if args.slug:
+        payload["slug"] = args.slug
+    r = api("POST", "/posts", payload, admin=True)
+    print(f"published: {r['post']['slug']}")
+
+
+def cmd_edit(args):
+    body = pathlib.Path(args.file).read_text()
+    payload = {"body": body, "note": args.note}
+    if args.title:
+        payload["title"] = args.title
+    r = api("PUT", f"/posts/{args.slug}", payload, admin=True)
+    print(f"revised: {args.slug} → v{len(r['post']['revisions'])} ({args.note})")
+
+
+def cmd_delete(args):
+    api("DELETE", f"/posts/{args.slug}", admin=True)
+    print(f"deleted: {args.slug}")
+
+
+# ── jarvis ────────────────────────────────────────────────────
+
+def read_task_log():
+    if TASK_LOG.exists():
+        try:
+            return json.loads(TASK_LOG.read_text())
+        except Exception:
+            pass
+    return []
+
+
+def write_task_log(tasks):
+    KOS_DIR.mkdir(exist_ok=True)
+    TASK_LOG.write_text(json.dumps(tasks[:50], indent=1))
+
+
+def cmd_jarvis(args):
+    if not CFG["agent_id"]:
+        die("JARVIS_AGENT_ID not set")
+    started = time.time()
+    status, r = http("POST", f"{CFG['jarvis']}/agents/{CFG['agent_id']}/tasks", {"task": args.task})
+    if status == 0 or status >= 400:
+        die(f"jarvis unreachable or rejected task ({status}): {r}")
+    task_id = r.get("task_id") or r.get("id")
+    print(f"submitted: {task_id}")
+
+    result, state = None, "running"
+    for _ in range(120):  # poll up to ~10 min
+        time.sleep(5)
+        s, t = http("GET", f"{CFG['jarvis']}/tasks/{task_id}")
+        if s == 0 or s >= 400:
+            continue
+        state = (t.get("status") or "").lower()
+        if state in ("done", "completed", "failed", "error"):
+            result = t.get("result") or t.get("output")
+            break
+    duration = round(time.time() - started, 1)
+
+    tasks = read_task_log()
+    tasks.insert(0, {
+        "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "task": args.task[:300],
+        "status": state,
+        "duration": duration,
+    })
+    write_task_log(tasks)
+    print(f"[{state} {duration}s]")
+    if result:
+        print(result)
+    cmd_jarvis_sync(args)
+
+
+def jarvis_heartbeat():
+    status, _ = http("GET", f"{CFG['jarvis']}/health", timeout=5)
+    return 200 <= status < 400
+
+
+def cmd_jarvis_sync(_):
+    online = jarvis_heartbeat()
+    if not online:
+        print("jarvis offline — skipping heartbeat push")
+        return False
+    api("POST", "/jarvis/sync", {"status": "online", "tasks": read_task_log()}, admin=True)
+    print("jarvis state synced")
+    return True
+
+
+# ── epistemic ─────────────────────────────────────────────────
+
+def cmd_epistemic_sync(_):
+    base = CFG["epistemic"]
+    s_nodes, nodes = http("GET", f"{base}/api/graph/nodes", timeout=15)
+    s_edges, edges = http("GET", f"{base}/api/graph/edges", timeout=15)
+    s_feed, feed = http("GET", f"{base}/api/feed?limit=5", timeout=15)
+
+    payload = {}
+    if s_nodes == 200 and s_edges == 200:
+        nl = nodes if isinstance(nodes, list) else nodes.get("nodes", [])
+        el = edges if isinstance(edges, list) else edges.get("edges", [])
+        payload["graph"] = {
+            "nodes": [{"id": n.get("id") or n.get("slug"),
+                       "label": n.get("label") or n.get("name") or n.get("title"),
+                       "kind": n.get("kind") or n.get("type", "topic"),
+                       "weight": n.get("weight") or n.get("strength", 1)} for n in nl[:500]],
+            "edges": [{"source": e.get("source") or e.get("sourceId"),
+                       "target": e.get("target") or e.get("targetId"),
+                       "weight": e.get("weight", 1)} for e in el[:2000]],
+        }
+    if s_feed == 200:
+        items = feed if isinstance(feed, list) else feed.get("items", [])
+        payload["learning"] = {"items": [
+            {"topic": i.get("topic") or i.get("title", ""),
+             "summary": i.get("summary") or i.get("description", ""),
+             "url": i.get("url")} for i in items[:10]
+        ]}
+
+    if not payload:
+        print("epistemic-feed unreachable — nothing to sync")
+        return False
+    r = api("POST", "/epistemic/sync", payload, admin=True)
+    print(f"synced: {', '.join(r['written'])}")
+    return True
+
+
+def main():
+    p = argparse.ArgumentParser(prog="kos", description="Kathir OS CLI")
+    sub = p.add_subparsers(dest="cmd", required=True)
+
+    sub.add_parser("list").set_defaults(fn=cmd_list)
+    sp = sub.add_parser("show"); sp.add_argument("slug"); sp.set_defaults(fn=cmd_show)
+
+    sp = sub.add_parser("post")
+    sp.add_argument("file"); sp.add_argument("--title"); sp.add_argument("--slug")
+    sp.add_argument("--kind", choices=["thought", "post"], default="thought")
+    sp.set_defaults(fn=cmd_post)
+
+    sp = sub.add_parser("edit")
+    sp.add_argument("slug"); sp.add_argument("file")
+    sp.add_argument("--note", required=True, help="changelog note shown to visitors")
+    sp.add_argument("--title")
+    sp.set_defaults(fn=cmd_edit)
+
+    sp = sub.add_parser("delete"); sp.add_argument("slug"); sp.set_defaults(fn=cmd_delete)
+
+    sp = sub.add_parser("jarvis"); sp.add_argument("task"); sp.set_defaults(fn=cmd_jarvis)
+    sub.add_parser("jarvis-sync").set_defaults(fn=cmd_jarvis_sync)
+    sub.add_parser("epistemic-sync").set_defaults(fn=cmd_epistemic_sync)
+
+    args = p.parse_args()
+    args.fn(args)
+
+
+if __name__ == "__main__":
+    main()
