@@ -521,6 +521,26 @@ export function initScene({ onGraphHover } = {}) {
   stations.forEach((s) => scene.add(s.group));
   const graphStation = stations[4];
 
+  // ── grounding: a shared floor + per-station anchors so the stations read as
+  //    landmarks placed in one continuous environment, not fields floating in void.
+  const FLOOR_Y = -58;
+  const ground = new THREE.GridHelper(2600, 52, COLORS.violet, 0x141426);
+  ground.position.set(0, FLOOR_Y, -520);
+  ground.material.transparent = true;
+  ground.material.opacity = 0.16;
+  ground.material.depthWrite = false;
+  scene.add(ground);
+
+  const beamMat = new THREE.LineBasicMaterial({ color: COLORS.green, transparent: true, opacity: 0.1 });
+  STATION_POS.forEach((p) => {
+    const beam = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(p.x, p.y, p.z - 30),
+        new THREE.Vector3(p.x, FLOOR_Y, p.z - 30),
+      ]), beamMat);
+    scene.add(beam);
+  });
+
   // camera path: catmull-rom through per-station camera keyframes
   const camCurve = new THREE.CatmullRomCurve3(
     STATION_POS.map((p) => p.clone().add(CAM_OFFSET)), false, "catmullrom", 0.35
@@ -544,6 +564,7 @@ export function initScene({ onGraphHover } = {}) {
   }
 
   let progress = 0;
+  let active = true; // paused (no render) while the simple view is showing
   let mouseX = 0, mouseY = 0, parX = 0, parY = 0;
   if (!MOBILE && !REDUCED) {
     addEventListener("mousemove", (e) => {
@@ -551,6 +572,38 @@ export function initScene({ onGraphHover } = {}) {
       mouseY = (e.clientY / innerHeight - 0.5) * 2;
     }, { passive: true });
   }
+
+  // ── free navigation: drag to look around, WASD to move/turn. Scroll stays the
+  //    guided tour (handled below via targetProgress); these layer on top. All of it
+  //    is disabled under reduced motion — there, only scroll/click drive the camera.
+  let lookYaw = 0, lookPitch = 0, dragYaw = 0, dragPitch = 0;
+  let dragging = false, lastPX = 0, lastPY = 0;
+  const keys = new Set();
+  const DRAG_IGNORE = "a,button,input,textarea,select,.thought-card,#term-wrap,#modal,#wayfind,nav,footer";
+  if (!REDUCED) {
+    addEventListener("pointerdown", (e) => {
+      if (e.target.closest && e.target.closest(DRAG_IGNORE)) return;
+      dragging = true; lastPX = e.clientX; lastPY = e.clientY;
+    }, { passive: true });
+    addEventListener("pointerup", () => { dragging = false; }, { passive: true });
+    addEventListener("pointermove", (e) => {
+      if (!dragging) return;
+      dragYaw = Math.max(-0.95, Math.min(0.95, dragYaw + (e.clientX - lastPX) * 0.0022));
+      dragPitch = Math.max(-0.55, Math.min(0.55, dragPitch + (e.clientY - lastPY) * 0.0018));
+      lastPX = e.clientX; lastPY = e.clientY;
+    }, { passive: true });
+  }
+  if (!MOBILE && !REDUCED) {
+    addEventListener("keydown", (e) => {
+      if (/^(input|textarea)$/i.test(e.target.tagName)) return;
+      const k = e.key.toLowerCase();
+      if (k === "w" || k === "a" || k === "s" || k === "d") keys.add(k);
+    });
+    addEventListener("keyup", (e) => keys.delete(e.key.toLowerCase()));
+  }
+  const _lookAt = new THREE.Vector3();
+  const _sph = new THREE.Spherical();
+  const _dir = new THREE.Vector3();
 
   // graph hover (raycast only while near the graph station, fine pointer only)
   const raycaster = new THREE.Raycaster();
@@ -579,9 +632,17 @@ export function initScene({ onGraphHover } = {}) {
 
   function frame() {
     requestAnimationFrame(frame);
-    if (document.hidden) return;
+    if (!active || document.hidden) return;
     const dt = Math.min(clock.getDelta(), 0.05);
     const t = clock.elapsedTime;
+
+    // keyboard movement: W/S walk the guided path (via scroll), A/D turn the view
+    if (keys.size) {
+      if (keys.has("w")) scrollBy(0, 14);
+      if (keys.has("s")) scrollBy(0, -14);
+      if (keys.has("a")) dragYaw = Math.max(-0.95, dragYaw - 0.012);
+      if (keys.has("d")) dragYaw = Math.min(0.95, dragYaw + 0.012);
+    }
 
     const target = targetProgress();
     progress = REDUCED ? target : progress + (target - progress) * Math.min(1, dt * 4.5);
@@ -590,11 +651,24 @@ export function initScene({ onGraphHover } = {}) {
     camCurve.getPointAt(u, camera.position);
     const look = lookCurve.getPointAt(u);
 
-    parX += ((mouseX * 7) - parX) * dt * 3;
-    parY += ((-mouseY * 4) - parY) * dt * 3;
+    if (!dragging) { parX += ((mouseX * 7) - parX) * dt * 3; parY += ((-mouseY * 4) - parY) * dt * 3; }
     camera.position.x += parX;
     camera.position.y += parY;
-    camera.lookAt(look);
+
+    // apply free-look: rotate the guided look direction by the eased drag offsets,
+    // and let the offset recenter toward the tour framing when the user lets go
+    if (!dragging) { dragYaw *= 0.96; dragPitch *= 0.96; }
+    lookYaw += (dragYaw - lookYaw) * Math.min(1, dt * 8);
+    lookPitch += (dragPitch - lookPitch) * Math.min(1, dt * 8);
+    if (lookYaw || lookPitch) {
+      _sph.setFromVector3(_dir.subVectors(look, camera.position));
+      _sph.theta -= lookYaw;
+      _sph.phi = Math.max(0.25, Math.min(Math.PI - 0.25, _sph.phi - lookPitch));
+      _dir.setFromSpherical(_sph);
+      camera.lookAt(_lookAt.addVectors(camera.position, _dir));
+    } else {
+      camera.lookAt(look);
+    }
 
     // update only stations near the camera
     stations.forEach((s, i) => {
@@ -624,6 +698,10 @@ export function initScene({ onGraphHover } = {}) {
   return {
     setGraph: (g) => graphStation.setGraph(g),
     isSampleGraph: () => true,
+    // pause/resume rendering when the simple view hides/shows the world
+    setActive: (on) => { active = !!on; if (on) clock.getDelta(); },
+    // travel to a landmark by index — a smooth scroll that drives the guided camera
+    travelTo: (i) => sectionEls[i]?.scrollIntoView({ behavior: REDUCED ? "auto" : "smooth", block: "start" }),
   };
 }
 

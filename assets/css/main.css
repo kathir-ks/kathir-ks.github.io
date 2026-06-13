@@ -18,10 +18,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow-x:h
 #cur-r{width:32px;height:32px;border:1px solid var(--accent);border-radius:50%;position:fixed;top:0;left:0;pointer-events:none;z-index:9998;opacity:.4;transition:all .4s cubic-bezier(.23,1,.32,1);}
 @media (hover:none),(pointer:coarse){#cur,#cur-r{display:none;}}
 
-/* 3D canvas behind everything */
-#scene{position:fixed;inset:0;z-index:0;display:block;}
+/* 3D canvas behind everything — only present in the explorable world mode */
+#scene{position:fixed;inset:0;z-index:0;display:none;}
+body.mode-world #scene{display:block;}
 body.no-webgl #scene{display:none;}
-body.no-webgl{background:radial-gradient(ellipse at 30% 10%,#101024 0%,var(--bg) 60%);}
 
 /* nav */
 nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:1.1rem 3rem;background:rgba(7,7,16,.7);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);font-family:var(--mono);font-size:11px;}
@@ -35,6 +35,9 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:cen
 #nav-status-text{font-family:var(--mono);font-size:11px;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 #term-toggle{font-family:var(--mono);font-size:11px;color:var(--accent);background:rgba(127,255,178,.06);border:1px solid rgba(127,255,178,.2);padding:5px 14px;transition:all .2s;}
 #term-toggle:hover{background:rgba(127,255,178,.12);}
+#mode-toggle{font-family:var(--mono);font-size:11px;color:var(--muted);background:transparent;border:1px solid var(--border);padding:5px 14px;transition:all .2s;letter-spacing:.04em;}
+#mode-toggle:hover{color:var(--text);border-color:var(--muted);}
+#mode-toggle[hidden]{display:none;}
 
 /* stations */
 main{position:relative;z-index:1;}
@@ -282,3 +285,72 @@ footer a:hover{color:var(--accent);}
   #term-wrap{bottom:0;right:0;left:0;width:100%;}
   footer{padding:1.5rem;flex-direction:column;gap:.4rem;text-align:center;}
 }
+
+/* ============================================================
+   WAYFINDING RAIL — a spatial site map shared by both modes.
+   Shows where you are, the other landmarks, and a way back to start.
+   ============================================================ */
+#wayfind{position:fixed;right:1.1rem;top:50%;transform:translateY(-50%);z-index:180;display:flex;flex-direction:column;gap:.5rem;align-items:flex-end;}
+.wf-dot{display:flex;align-items:center;gap:.6rem;background:none;border:none;padding:2px;font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;opacity:.55;transition:opacity .2s,color .2s;}
+.wf-dot .wf-pip{width:7px;height:7px;border:1px solid var(--muted);border-radius:50%;transition:all .2s;flex-shrink:0;order:2;}
+.wf-dot .wf-label{order:1;opacity:0;transform:translateX(6px);transition:all .2s;white-space:nowrap;}
+.wf-dot:hover{opacity:1;color:var(--text);}
+.wf-dot:hover .wf-label{opacity:1;transform:none;}
+.wf-dot.here{opacity:1;color:var(--accent);}
+.wf-dot.here .wf-pip{background:var(--accent);border-color:var(--accent);box-shadow:0 0 10px var(--accent);}
+.wf-dot.here .wf-label{opacity:1;transform:none;}
+.wf-home{margin-top:.4rem;width:24px;height:24px;border:1px solid var(--border);background:var(--panel);color:var(--muted);font-size:12px;transition:all .2s;}
+.wf-home:hover{color:var(--accent);border-color:var(--accent);}
+@media (hover:none),(pointer:coarse){#wayfind .wf-label{display:none;}}
+@media(max-width:768px){#wayfind{right:.5rem;gap:.4rem;}}
+
+/* knowledge-graph topics as readable chips (shown in the simple view) */
+.graph-simple{display:none;flex-wrap:wrap;gap:7px;margin-top:1.6rem;}
+.gs-chip{font-family:var(--mono);font-size:10px;color:var(--muted);border:1px solid var(--border);padding:4px 11px;background:var(--surface);}
+
+/* ============================================================
+   SIMPLE VIEW — calm, lighter, elegant. No 3D canvas, no autonomous
+   motion, native cursor. Also the universal graceful-degradation
+   fallback (no-WebGL / reduced-motion / low-power devices).
+   ============================================================ */
+body.mode-simple{
+  --bg:#14141d;--surface:#1b1b26;--surface2:#23232f;--border:#2d2d3c;
+  --muted:#9292ab;--text:#eaeaf4;--panel:#1b1b26;
+  background:linear-gradient(180deg,#16161f 0%,#101019 100%);background-attachment:fixed;
+  cursor:auto;
+}
+body.mode-simple a,body.mode-simple button,body.mode-simple .thought-card,body.mode-simple .log-entry{cursor:pointer;}
+body.mode-simple input{cursor:text;}
+body.mode-simple #cur,body.mode-simple #cur-r{display:none!important;}
+
+/* drop translucency/blur — surfaces become solid and calm */
+body.mode-simple .panel,body.mode-simple .feed-col,body.mode-simple .thought-card,
+body.mode-simple .graph-panel,body.mode-simple .stat-cell,body.mode-simple .proj-card,
+body.mode-simple .jarvis-panel,body.mode-simple .cron-item,body.mode-simple .clink,
+body.mode-simple nav,body.mode-simple footer{backdrop-filter:none;}
+
+/* airier rhythm; no full-viewport scroll-stations */
+body.mode-simple .station{min-height:auto;padding:5.5rem 1.5rem 2.5rem;}
+body.mode-simple #s-hero{min-height:86vh;padding-top:9rem;}
+body.mode-simple .st-inner{max-width:880px;}
+body.mode-simple .feed-col,body.mode-simple .jarvis-panel,
+body.mode-simple .graph-panel,body.mode-simple .thought-card{padding:1.8rem;}
+
+/* quieter hero — no "scroll to fly", smaller display type, no text shadows */
+body.mode-simple .hero-name{font-size:clamp(3rem,8vw,6rem);}
+body.mode-simple .hero-scroll{display:none;}
+body.mode-simple .hero-desc,body.mode-simple .about-text p,
+body.mode-simple .tl-body,body.mode-simple .contact-text p{text-shadow:none;}
+
+/* content must be visible without scroll-driven reveal */
+body.mode-simple .rv{opacity:1;transform:none;transition:none;}
+
+/* graph station: the constellation is gone, so its 3D-only hint is too */
+body.mode-simple .graph-simple{display:flex;}
+body.mode-simple .graph-hint{display:none;}
+
+/* solid, lighter chrome where dark translucency was tuned for a photo backdrop */
+body.mode-simple nav{background:rgba(20,20,29,.94);}
+body.mode-simple footer{background:#14141d;}
+body.mode-simple .btn-s{background:var(--surface);}
+body.mode-simple .chip{background:var(--surface);}

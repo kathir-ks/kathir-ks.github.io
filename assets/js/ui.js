@@ -155,14 +155,41 @@ function closeModal() {
 
 // ── knowledge graph panel ─────────────────────────────────────
 
+// Lightweight topic list for the simple view's readable graph, used when no live
+// epistemic data has synced. Kept here (no three.js dependency) so the simple view
+// never pulls in the heavy scene module.
+const SAMPLE_TOPICS = [
+  { label: "sparse autoencoders", kind: "interp" }, { label: "jumprelu", kind: "interp" },
+  { label: "superposition", kind: "interp" }, { label: "circuits", kind: "interp" },
+  { label: "transformers", kind: "ml" }, { label: "attention", kind: "ml" },
+  { label: "pretraining", kind: "ml" }, { label: "scaling laws", kind: "ml" },
+  { label: "jax", kind: "systems" }, { label: "xla", kind: "systems" },
+  { label: "tpu pods", kind: "systems" }, { label: "pipeline parallel", kind: "systems" },
+  { label: "kv cache", kind: "systems" }, { label: "hindi nlp", kind: "data" },
+  { label: "fineweb edu", kind: "data" }, { label: "arc agi", kind: "reasoning" },
+  { label: "llm agents", kind: "agents" }, { label: "rust", kind: "lang" },
+  { label: "v8 internals", kind: "lang" },
+];
+
+function renderGraphSimple(nodes) {
+  const el = $("graph-simple");
+  if (!el) return;
+  el.innerHTML = nodes.slice(0, 40).map((n) => {
+    const label = n.label || (n.id || "").replace(/-/g, " ");
+    return `<span class="gs-chip" data-kind="${esc(n.kind || "topic")}">${esc(label)}</span>`;
+  }).join("");
+}
+
 async function loadEpistemic(sceneApi) {
   const [graph, learning] = await Promise.all([fetchGraph(), fetchLearning()]);
-  if (graph?.nodes?.length) {
+  const liveNodes = graph?.nodes?.length ? graph.nodes : null;
+  if (liveNodes) {
     sceneApi.setGraph(graph);
     $("graph-src").textContent = `live · ${graph.nodes.length} topics · synced ${timeAgo(graph.updated)}`;
   } else {
     $("graph-src").textContent = "sample data — epistemic-feed not syncing yet";
   }
+  renderGraphSimple(liveNodes || SAMPLE_TOPICS);
   const el = $("learning-list");
   const items = learning?.items?.filter((i) => i.topic) || [];
   if (!items.length) {
@@ -211,6 +238,7 @@ async function loadJarvis() {
 // ── card tilt (CSS 3D, fine pointers only) ────────────────────
 
 function initTilt(scope) {
+  if (document.body.classList.contains("mode-simple")) return; // calm, no 3D tilt
   if (matchMedia("(pointer:coarse)").matches || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   scope.querySelectorAll(".tilt").forEach((card) => {
     card.addEventListener("mousemove", (e) => {

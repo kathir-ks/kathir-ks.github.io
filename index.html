@@ -13,6 +13,33 @@
 </script>
 </head>
 <body>
+<script>
+/* Pre-paint view-mode resolution — set the body mode class before the scene or
+   styles paint so there's no flash of the wrong experience. viewmode.js re-resolves
+   and is authoritative; this only avoids the flash. Precedence: no-WebGL/forced →
+   stored manual preference → default 3D world. */
+(function () {
+  try {
+    var pref = null;
+    try { pref = localStorage.getItem("kos.viewmode"); } catch (e) {}
+    var reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var webgl = (function () {
+      try {
+        var c = document.createElement("canvas");
+        return !!(window.WebGLRenderingContext &&
+          (c.getContext("webgl") || c.getContext("experimental-webgl")));
+      } catch (e) { return false; }
+    })();
+    var mode = (pref === "world" || pref === "simple")
+      ? pref
+      : (reduce ? "simple" : "world");
+    if (!webgl) { mode = "simple"; document.body.classList.add("no-webgl"); }
+    document.body.classList.add("mode-" + mode);
+  } catch (e) {
+    document.body.classList.add("mode-simple");
+  }
+})();
+</script>
 <div id="cur"></div>
 <div id="cur-r"></div>
 <canvas id="scene" aria-hidden="true"></canvas>
@@ -32,6 +59,7 @@
   <div class="nav-right">
     <div class="status-pip"></div>
     <span id="nav-status-text">loading...</span>
+    <button id="mode-toggle" title="Switch between the 3D world and a simple, quiet reading view">simple view</button>
     <button id="term-toggle">terminal _</button>
   </div>
 </nav>
@@ -40,7 +68,7 @@
   <!-- 0 · HERO -->
   <section class="station" id="s-hero" data-station>
     <div class="st-inner">
-      <div class="hero-eyebrow">// AI Researcher · Systems Engineer · Madurai, India</div>
+      <div class="hero-eyebrow">// AI Researcher · Systems Engineer · Coimbatore, India</div>
       <h1 class="hero-name">Kathir<br/><span class="outline">K S</span></h1>
       <p class="hero-desc">Building frontier AI from India — mechanistic interpretability, large-scale pretraining, TPU infrastructure. This site is a live OS: scroll to fly through it.</p>
       <div class="hero-ctas">
@@ -109,6 +137,7 @@
         <div class="sec-label rv">04 — Knowledge Graph</div>
         <h2 class="sec-title rv" style="transition-delay:.05s">What I'm<br/><em>learning.</em></h2>
         <p class="graph-hint rv" style="transition-delay:.08s">← the constellation behind this text is the live graph from my epistemic-feed pipeline.<br/>hover a node to inspect it. it grows as I learn.</p>
+        <div id="graph-simple" class="graph-simple" aria-label="Knowledge graph topics"></div>
       </div>
       <div class="graph-panel rv" style="transition-delay:.12s">
         <div class="feed-col-title"><div class="live-dot" style="background:var(--accent2)"></div>Currently Exploring</div>
@@ -126,7 +155,7 @@
         <div class="rv" style="transition-delay:.05s">
           <h2 class="sec-title">Building from<br/><em>first principles.</em></h2>
           <div class="about-text">
-            <p>I'm a 22-year-old AI researcher from Madurai. I taught myself transformer architectures until they stopped being a paper and started being intuition.</p>
+            <p>I'm a 22-year-old AI researcher from Coimbatore. I taught myself transformer architectures until they stopped being a paper and started being intuition.</p>
             <p>By day I work on <strong>embedded systems and RTOS</strong> at Soliton Technologies. By conviction I'm a <strong>frontier AI researcher</strong> — training sparse autoencoders, building Hindi datasets, running experiments on TPU pods via Google's TRC program.</p>
           </div>
         </div>
@@ -150,7 +179,7 @@
         <div class="tl-item"><div class="tl-dot"></div><div class="tl-date">2024 — 2025</div><div class="tl-title">ARC-AGI & Distributed Inference</div><div class="tl-body">JAX pipelines for Qwen on TPU pods. KV caching, MLP extraction, LoRA fine-tuning. ViT + AttnRes in JAX/Flax.</div></div>
         <div class="tl-item"><div class="tl-dot"></div><div class="tl-date">2024</div><div class="tl-title">FineWeb-Edu-Hindi & Hindi LLM</div><div class="tl-body">300B token dataset on TPU v4-256 via Google TRC. 200M param LM from scratch. Outreach to Sarvam AI & DeepMind.</div></div>
         <div class="tl-item"><div class="tl-dot"></div><div class="tl-date">2023 — 2024</div><div class="tl-title">Deep Self-Study</div><div class="tl-body">Transformers from first principles. JAX, XLA, pipeline parallelism, FSDP. TPU v3→v5e. Diffusion models, SAE theory.</div></div>
-        <div class="tl-item"><div class="tl-dot dim"></div><div class="tl-date">ONGOING</div><div class="tl-title">Soliton Technologies</div><div class="tl-body">VxWorks RTOS, embedded C++, LabVIEW, Linux kernel, PCI bus architectures.</div></div>
+        <div class="tl-item"><div class="tl-dot dim"></div><div class="tl-date">ONGOING</div><div class="tl-title">Soliton Technologies</div><div class="tl-body">VxWorks RTOS, embedded C++, Linux kernel, PCI bus architectures.</div></div>
       </div>
     </div>
   </section>
@@ -202,7 +231,7 @@
   </section>
 
   <footer>
-    <span>© 2026 Kathir K S — Madurai, India</span>
+    <span>© 2026 Kathir K S — Coimbatore, India</span>
     <span id="uptime-el"></span>
     <a href="#s-hero">↑ top</a>
   </footer>
@@ -287,19 +316,8 @@
 </script>
 
 <script type="module">
-import { initUI, graphTooltip } from "./assets/js/ui.js";
-import { initTerminal } from "./assets/js/terminal.js";
-
-let sceneApi = { setGraph() {} };
-try {
-  const { initScene } = await import("./assets/js/scene.js");
-  sceneApi = initScene({ onGraphHover: graphTooltip });
-} catch (e) {
-  console.warn("3D scene unavailable, falling back to flat mode:", e);
-  document.body.classList.add("no-webgl");
-}
-initUI(sceneApi);
-initTerminal();
+import { initViewMode } from "./assets/js/viewmode.js";
+initViewMode();
 </script>
 </body>
 </html>
